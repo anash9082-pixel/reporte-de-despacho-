@@ -1,0 +1,503 @@
+import { BlockId, BlockMeta, DeliveryItem, HubId, HubMeta } from '../types/delivery';
+
+export const PROVINCIAS_RD = [
+  'Distrito Nacional',
+  'Santo Domingo',
+  'Santiago',
+  'Puerto Plata',
+  'La Vega',
+  'Espaillat',
+  'Duarte',
+  'Monseñor Nouel',
+  'San Cristóbal',
+  'San Pedro de Macorís',
+  'La Romana',
+  'La Altagracia',
+  'Valverde',
+  'Monte Cristi',
+  'Sánchez Ramírez',
+  'Hato Mayor',
+  'El Seibo',
+  'Azua',
+  'Peravia',
+  'San Juan',
+  'Barahona',
+  'Samaná',
+  'María Trinidad Sánchez',
+  'Hermanas Mirabal',
+  'Dajabón',
+  'Santiago Rodríguez',
+  'Bahoruco',
+  'Independencia',
+  'Pedernales',
+  'Elías Piña',
+  'San José de Ocoa',
+  'Monte Plata'
+];
+
+export const ORDERED_BLOCK_IDS: BlockId[] = [
+  'santodomingo_propia',
+  'santiago_propia',
+  'santodomingo_blanco',
+  'santiago_blanco'
+];
+
+export const ORDERED_HUB_IDS: HubId[] = [
+  'santodomingo',
+  'santiago'
+];
+
+export const HUBS_CONFIG: Record<HubId, HubMeta> = {
+  santodomingo: {
+    id: 'santodomingo',
+    titulo: 'SEDE SANTO DOMINGO',
+    subtitulo: 'Sede Santo Domingo y Transporte Blanco',
+    sede: 'Santo Domingo',
+    badgeLabel: 'SEDE SANTO DOMINGO Y TRANSPORTE BLANCO',
+    accentBorder: 'border-l-4 border-l-blue-500',
+    accentBadge: 'bg-blue-900/60 text-blue-200 border-blue-700/80'
+  },
+  santiago: {
+    id: 'santiago',
+    titulo: 'SEDE SANTIAGO DE LOS CABALLEROS',
+    subtitulo: 'Sede Santiago y Transporte Blanco',
+    sede: 'Santiago',
+    badgeLabel: 'SEDE SANTIAGO Y TRANSPORTE BLANCO',
+    accentBorder: 'border-l-4 border-l-amber-500',
+    accentBadge: 'bg-amber-900/60 text-amber-200 border-amber-700/80'
+  }
+};
+
+export function getHubFromItem(item: DeliveryItem): HubId {
+  if (item.blockId) {
+    return item.blockId.startsWith('santiago') ? 'santiago' : 'santodomingo';
+  }
+  const o = (item.origen || '').toLowerCase();
+  return (o.includes('santiago') || o.includes('stg') || o.includes('cibao')) ? 'santiago' : 'santodomingo';
+}
+
+export function getServiceTypeFromItem(item: DeliveryItem): 'Flota Propia' | 'Transporte Blanco' {
+  if (item.blockId) {
+    return item.blockId.includes('blanco') ? 'Transporte Blanco' : 'Flota Propia';
+  }
+  const o = (item.origen || '').toLowerCase();
+  return (o.includes('blanco') || o.includes('tb') || o.includes('tercerizad')) ? 'Transporte Blanco' : 'Flota Propia';
+}
+
+export const BLOCKS_CONFIG: Record<BlockId, BlockMeta> = {
+  santodomingo_propia: {
+    id: 'santodomingo_propia',
+    titulo: 'BASE SANTO DOMINGO',
+    subtitulo: 'Despacho con flota propia',
+    tipo: 'propia',
+    sede: 'Santo Domingo',
+    badgeLabel: 'FLOTA PROPIA',
+    headerBg: 'bg-slate-900 text-white'
+  },
+  santiago_propia: {
+    id: 'santiago_propia',
+    titulo: 'BASE SANTIAGO DE LOS CABALLEROS',
+    subtitulo: 'Despacho con flota propia',
+    tipo: 'propia',
+    sede: 'Santiago',
+    badgeLabel: 'FLOTA PROPIA',
+    headerBg: 'bg-slate-900 text-white'
+  },
+  santodomingo_blanco: {
+    id: 'santodomingo_blanco',
+    titulo: 'TRANSPORTE BLANCO - SANTO DOMINGO',
+    subtitulo: 'Despacho tercerizado',
+    tipo: 'tercerizado',
+    sede: 'Santo Domingo',
+    badgeLabel: 'TERCERIZADO',
+    headerBg: 'bg-slate-800 text-white'
+  },
+  santiago_blanco: {
+    id: 'santiago_blanco',
+    titulo: 'TRANSPORTE BLANCO - SANTIAGO DE LOS CABALLEROS',
+    subtitulo: 'Despacho tercerizado',
+    tipo: 'tercerizado',
+    sede: 'Santiago',
+    badgeLabel: 'TERCERIZADO',
+    headerBg: 'bg-slate-800 text-white'
+  }
+};
+
+const TODAY = '2026-10-25';
+const YESTERDAY = '2026-10-24';
+
+export const INITIAL_DELIVERIES: DeliveryItem[] = [
+  // 1. BASE SANTO DOMINGO (Flota propia)
+  {
+    id: 'sd-user-01',
+    fecha: TODAY,
+    origen: 'BASE SANTO DOMINGO',
+    blockId: 'santodomingo_propia',
+    unidad: 'CHEVROLET (Ficha SD-10)',
+    chofer: 'Alexander',
+    ayudante: 'N/A',
+    provincia: 'Santo Domingo',
+    bultos: 10,
+    estado: 'Entregado',
+    observacion: 'Se entregó sin novedad',
+    farmacia: 'Farmacia Carol - Av. San Vicente',
+    numeroPedido: 'PED-2026-8801',
+    horaDespacho: '06:15 AM'
+  },
+  {
+    id: 'sd-fp-01',
+    fecha: TODAY,
+    origen: 'BASE SANTO DOMINGO',
+    blockId: 'santodomingo_propia',
+    unidad: 'CAMIÓN 1 (Mack 8T - Ficha 202)',
+    chofer: 'Manuel Alejandro Batista',
+    ayudante: 'Diógenes Cuevas',
+    provincia: 'Distrito Nacional',
+    bultos: 210,
+    estado: 'Entregado',
+    observacion: 'Descarga en Ensanche La Fe y Villa Consuelo completada',
+    farmacia: 'Farmacia Medicar GBC - Máximo Gómez',
+    numeroPedido: 'PED-2026-8802',
+    horaDespacho: '06:00 AM'
+  },
+  {
+    id: 'sd-fp-02',
+    fecha: TODAY,
+    origen: 'BASE SANTO DOMINGO',
+    blockId: 'santodomingo_propia',
+    unidad: 'CAMIÓN 2 (Isuzu 6T - Ficha 206)',
+    chofer: 'Héctor Bienvenido Feliz',
+    ayudante: 'Junior Alexander Méndez',
+    provincia: 'Santo Domingo',
+    bultos: 165,
+    estado: 'Entregado',
+    observacion: 'Ruta Megacentro y San Isidro (Santo Domingo Este)',
+    farmacia: 'Farmacia Los Hidalgos - San Isidro',
+    numeroPedido: 'PED-2026-8803',
+    horaDespacho: '06:45 AM'
+  },
+  {
+    id: 'sd-fp-03',
+    fecha: TODAY,
+    origen: 'BASE SANTO DOMINGO',
+    blockId: 'santodomingo_propia',
+    unidad: 'FURGONETA 3 (Isuzu NPR - Ficha 209)',
+    chofer: 'Yovanny Santana Mateo',
+    ayudante: 'Cristian Daniel Soto',
+    provincia: 'San Cristóbal',
+    bultos: 115,
+    estado: 'Pendiente',
+    observacion: 'Ventana de recepción pautada 11:30 AM en Zona Industrial',
+    farmacia: 'Farmacia San Cristóbal Central',
+    numeroPedido: 'PED-2026-8804',
+    horaDespacho: '07:30 AM'
+  },
+  {
+    id: 'sd-fp-04',
+    fecha: TODAY,
+    origen: 'BASE SANTO DOMINGO',
+    blockId: 'santodomingo_propia',
+    unidad: 'CAMIÓN 4 (Hino 500 - Ficha 214)',
+    chofer: 'Sandy Vladimir Terrero',
+    ayudante: 'Marcos Encarnación',
+    provincia: 'San Pedro de Macorís',
+    bultos: 130,
+    estado: 'Pendiente',
+    observacion: 'En tránsito por Peaje Las Américas en dirección Este',
+    farmacia: 'Distribuidora Farmacéutica del Este',
+    numeroPedido: 'PED-2026-8805',
+    horaDespacho: '08:10 AM'
+  },
+  {
+    id: 'sd-fp-05',
+    fecha: TODAY,
+    origen: 'BASE SANTO DOMINGO',
+    blockId: 'santodomingo_propia',
+    unidad: 'FURGONETA 5 (Daihatsu - Ficha 218)',
+    chofer: 'Bernardo Antonio Ciprián',
+    ayudante: 'Ángel Gabriel Tejada',
+    provincia: 'Santo Domingo',
+    bultos: 78,
+    estado: 'Entregado',
+    observacion: 'Entregas en Herrera y Los Alcarrizos recibidas conformes',
+    farmacia: 'Farmacia Brasil - Av. Isabel Aguiar',
+    numeroPedido: 'PED-2026-8806',
+    horaDespacho: '08:40 AM'
+  },
+
+  // 2. BASE SANTIAGO DE LOS CABALLEROS (Flota propia)
+  {
+    id: 'stg-user-01',
+    fecha: TODAY,
+    origen: 'BASE SANTIAGO DE LOS CABALLEROS',
+    blockId: 'santiago_propia',
+    unidad: 'RENAULT (Ficha STG-05)',
+    chofer: 'Lusiano',
+    ayudante: 'N/A',
+    provincia: 'Santiago',
+    bultos: 5,
+    estado: 'Entregado',
+    observacion: 'Se entregó sin novedad',
+    farmacia: 'Farmacia San Rafael - Centro',
+    numeroPedido: 'PED-2026-8810',
+    horaDespacho: '06:30 AM'
+  },
+  {
+    id: 'stg-fp-01',
+    fecha: TODAY,
+    origen: 'BASE SANTIAGO DE LOS CABALLEROS',
+    blockId: 'santiago_propia',
+    unidad: 'CAMIÓN 1 (Isuzu 5T - Ficha 101)',
+    chofer: 'Carlos Manuel Rosario',
+    ayudante: 'Pedro Julio Vargas',
+    provincia: 'Santiago',
+    bultos: 145,
+    estado: 'Entregado',
+    observacion: 'Zona Franca Víctor Espaillat Mera cerrada con conduce',
+    farmacia: 'Farmacia El Sol - Los Jardines',
+    numeroPedido: 'PED-2026-8811',
+    horaDespacho: '06:30 AM'
+  },
+  {
+    id: 'stg-fp-02',
+    fecha: TODAY,
+    origen: 'BASE SANTIAGO DE LOS CABALLEROS',
+    blockId: 'santiago_propia',
+    unidad: 'FURGONETA 2 (Daihatsu - Ficha 104)',
+    chofer: 'Ramón Antonio Almonte',
+    ayudante: 'José Francisco Marte',
+    provincia: 'Puerto Plata',
+    bultos: 82,
+    estado: 'Entregado',
+    observacion: 'Descarga en Almacenes Montellano y Sosúa sin demoras',
+    horaDespacho: '07:00 AM'
+  },
+  {
+    id: 'stg-fp-03',
+    fecha: TODAY,
+    origen: 'BASE SANTIAGO DE LOS CABALLEROS',
+    blockId: 'santiago_propia',
+    unidad: 'CAMIÓN 3 (Hino 300 - Ficha 109)',
+    chofer: 'Rafael Emilio Disla',
+    ayudante: 'Kelvin Santos',
+    provincia: 'La Vega',
+    bultos: 94,
+    estado: 'Pendiente',
+    observacion: 'En muelle de recepción distribuidora El Riíto',
+    horaDespacho: '07:45 AM'
+  },
+  {
+    id: 'stg-fp-04',
+    fecha: TODAY,
+    origen: 'BASE SANTIAGO DE LOS CABALLEROS',
+    blockId: 'santiago_propia',
+    unidad: 'CAMIÓN 4 (Hyundai HD78 - Ficha 112)',
+    chofer: 'Nelson David Guzmán',
+    ayudante: 'Luis Miguel Reyes',
+    provincia: 'Espaillat',
+    bultos: 68,
+    estado: 'Entregado',
+    observacion: 'Entregado en Moca centro con conduce firmado',
+    horaDespacho: '08:15 AM'
+  },
+  {
+    id: 'stg-fp-05',
+    fecha: TODAY,
+    origen: 'BASE SANTIAGO DE LOS CABALLEROS',
+    blockId: 'santiago_propia',
+    unidad: 'CAMIÓN 5 (Freightliner - Ficha 115)',
+    chofer: 'Wilson Gabriel Polanco',
+    ayudante: 'Arismendy Cruz',
+    provincia: 'Valverde',
+    bultos: 120,
+    estado: 'Pendiente',
+    observacion: 'Ruta hacia Mao Valverde, retraso leve por desvío en Esperanza',
+    horaDespacho: '08:30 AM'
+  },
+
+  // 3. TRANSPORTE BLANCO - SANTO DOMINGO (Tercerizado)
+  {
+    id: 'sd-tb-user-01',
+    fecha: TODAY,
+    origen: 'TRANSPORTE BLANCO - SANTO DOMINGO',
+    blockId: 'santodomingo_blanco',
+    unidad: 'TRANSPORTE (TB-SD 01)',
+    chofer: 'Transporte',
+    ayudante: 'N/A',
+    provincia: 'Santo Domingo',
+    bultos: 2,
+    estado: 'Entregado',
+    observacion: 'Se entregó sin novedad',
+    horaDespacho: '07:15 AM'
+  },
+  {
+    id: 'sd-tb-01',
+    fecha: TODAY,
+    origen: 'TRANSPORTE BLANCO - SANTO DOMINGO',
+    blockId: 'santodomingo_blanco',
+    unidad: 'TB-SD 1 (Furgón JAC 4T)',
+    chofer: 'Ambiorix De la Rosa',
+    ayudante: 'N/A',
+    provincia: 'La Romana',
+    bultos: 92,
+    estado: 'Entregado',
+    observacion: 'Entregado en Zona Hotelera Bayahíbe y La Romana Pueblo',
+    horaDespacho: '07:00 AM'
+  },
+  {
+    id: 'sd-tb-02',
+    fecha: TODAY,
+    origen: 'TRANSPORTE BLANCO - SANTO DOMINGO',
+    blockId: 'santodomingo_blanco',
+    unidad: 'TB-SD 2 (Camioneta Changan Box)',
+    chofer: 'Freddy Ramón Castillo',
+    ayudante: 'N/A',
+    provincia: 'La Altagracia',
+    bultos: 64,
+    estado: 'Pendiente',
+    observacion: 'En ruta hacia Bávaro - Punta Cana pautado 2:00 PM',
+    horaDespacho: '07:50 AM'
+  },
+  {
+    id: 'sd-tb-03',
+    fecha: TODAY,
+    origen: 'TRANSPORTE BLANCO - SANTO DOMINGO',
+    blockId: 'santodomingo_blanco',
+    unidad: 'TB-SD 3 (Panel Ford Transit)',
+    chofer: 'Elvin José Segura',
+    ayudante: 'N/A',
+    provincia: 'Distrito Nacional',
+    bultos: 48,
+    estado: 'Entregado',
+    observacion: 'Ruta Piantini, Naco y Bella Vista completada al 100%',
+    horaDespacho: '08:20 AM'
+  },
+  {
+    id: 'sd-tb-04',
+    fecha: TODAY,
+    origen: 'TRANSPORTE BLANCO - SANTO DOMINGO',
+    blockId: 'santodomingo_blanco',
+    unidad: 'TB-SD 4 (Camión Daihatsu 3.5T)',
+    chofer: 'Silvio Antonio Paredes',
+    ayudante: 'N/A',
+    provincia: 'Peravia',
+    bultos: 75,
+    estado: 'Pendiente',
+    observacion: 'Descarga programada en Almacén Central Baní',
+    horaDespacho: '08:50 AM'
+  },
+
+  // 4. TRANSPORTE BLANCO - SANTIAGO DE LOS CABALLEROS (Tercerizado)
+  {
+    id: 'stg-tb-user-01',
+    fecha: TODAY,
+    origen: 'TRANSPORTE BLANCO - SANTIAGO DE LOS CABALLEROS',
+    blockId: 'santiago_blanco',
+    unidad: 'TRANSPORTE (TB-STG 01)',
+    chofer: 'Transporte',
+    ayudante: 'N/A',
+    provincia: 'Santiago',
+    bultos: 1,
+    estado: 'Pendiente',
+    observacion: 'Por distancia y tiempo no se entregó',
+    horaDespacho: '08:00 AM'
+  },
+  {
+    id: 'stg-tb-01',
+    fecha: TODAY,
+    origen: 'TRANSPORTE BLANCO - SANTIAGO DE LOS CABALLEROS',
+    blockId: 'santiago_blanco',
+    unidad: 'TB-STG 1 (Panel Hyundai H100)',
+    chofer: 'Franklin Jiménez Peralta',
+    ayudante: 'N/A',
+    provincia: 'Duarte',
+    bultos: 55,
+    estado: 'Entregado',
+    observacion: 'Entrega retail en San Francisco de Macorís sin novedades',
+    horaDespacho: '07:15 AM'
+  },
+  {
+    id: 'stg-tb-02',
+    fecha: TODAY,
+    origen: 'TRANSPORTE BLANCO - SANTIAGO DE LOS CABALLEROS',
+    blockId: 'santiago_blanco',
+    unidad: 'TB-STG 2 (Hilux con Baranda)',
+    chofer: 'Eduardo José Tavárez',
+    ayudante: 'N/A',
+    provincia: 'Monte Cristi',
+    bultos: 42,
+    estado: 'Pendiente',
+    observacion: 'En tránsito hacia Guayubín y San Fernando de Montecristi',
+    horaDespacho: '08:00 AM'
+  },
+  {
+    id: 'stg-tb-03',
+    fecha: TODAY,
+    origen: 'TRANSPORTE BLANCO - SANTIAGO DE LOS CABALLEROS',
+    blockId: 'santiago_blanco',
+    unidad: 'TB-STG 3 (Mitsubishi Fuso 4.5T)',
+    chofer: 'Guillermo Antonio Peña',
+    ayudante: 'N/A',
+    provincia: 'Monseñor Nouel',
+    bultos: 88,
+    estado: 'Entregado',
+    observacion: 'Recibido en Almacén Bonao KM 84',
+    horaDespacho: '08:45 AM'
+  },
+  {
+    id: 'stg-tb-04',
+    fecha: TODAY,
+    origen: 'TRANSPORTE BLANCO - SANTIAGO DE LOS CABALLEROS',
+    blockId: 'santiago_blanco',
+    unidad: 'TB-STG 4 (Panel Kia K2700)',
+    chofer: 'Domingo Alberto Morillo',
+    ayudante: 'N/A',
+    provincia: 'Santiago',
+    bultos: 37,
+    estado: 'Pendiente',
+    observacion: 'Distribución perimetral Tamboril y Licey al Medio',
+    horaDespacho: '09:00 AM'
+  },
+
+  // Yesterday deliveries for testing date filtering
+  {
+    id: 'sd-fp-y01',
+    fecha: YESTERDAY,
+    origen: 'BASE SANTO DOMINGO',
+    blockId: 'santodomingo_propia',
+    unidad: 'CAMIÓN 1 (Mack 8T - Ficha 202)',
+    chofer: 'Manuel Alejandro Batista',
+    ayudante: 'Diógenes Cuevas',
+    provincia: 'Distrito Nacional',
+    bultos: 230,
+    estado: 'Entregado',
+    observacion: 'Ruta Zona Colonial y Gazcue 100% completada',
+    horaDespacho: '06:00 AM'
+  },
+  {
+    id: 'stg-fp-y01',
+    fecha: YESTERDAY,
+    origen: 'BASE SANTIAGO DE LOS CABALLEROS',
+    blockId: 'santiago_propia',
+    unidad: 'CAMIÓN 1 (Isuzu 5T - Ficha 101)',
+    chofer: 'Carlos Manuel Rosario',
+    ayudante: 'Pedro Julio Vargas',
+    provincia: 'Santiago',
+    bultos: 160,
+    estado: 'Entregado',
+    observacion: 'Entregas Cienfuegos y Gurabo al día',
+    horaDespacho: '06:30 AM'
+  }
+];
+
+export const CSV_HEADER_COLUMNS = [
+  'Fecha',
+  'Origen',
+  'Unidad',
+  'Chofer',
+  'Ayudante',
+  'Provincia',
+  'Bultos',
+  'Estado',
+  'Observación'
+];

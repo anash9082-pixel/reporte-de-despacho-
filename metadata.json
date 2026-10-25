@@ -1,0 +1,6 @@
+{
+  "name": "Sistema de Reporte de Entregas - RD",
+  "description": "Plataforma de monitoreo y reporte logístico de entregas para sedes y transporte tercerizado en Santiago y Santo Domingo, República Dominicana con sincronización de Google Sheets y CSV.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
