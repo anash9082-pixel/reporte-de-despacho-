@@ -16,7 +16,9 @@ import {
   RefreshCw,
   FileCode2,
   SlidersHorizontal,
-  MessageSquare
+  MessageSquare,
+  Copy,
+  Check
 } from 'lucide-react';
 
 interface FilterBarProps {
@@ -28,13 +30,13 @@ interface FilterBarProps {
   onSelectStatus: (status: 'all' | DeliveryStatus) => void;
   searchQuery: string;
   onSearchChange: (query: string) => void;
-  startDate: string;
-  endDate: string;
-  onStartDateChange: (date: string) => void;
-  onEndDateChange: (date: string) => void;
-  onSetDateRange: (start: string, end: string) => void;
+  selectedDate: string;
+  onDateChange: (date: string) => void;
+  onShiftDate: (days: number) => void;
   onCapturePng: () => void;
   isCapturing: boolean;
+  onCopyReportWithPhoto: () => void;
+  isCopying: boolean;
   onOpenNewModal: () => void;
   onOpenSheetsModal: () => void;
   onSyncDirect: () => void;
@@ -57,13 +59,13 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   onSelectStatus,
   searchQuery,
   onSearchChange,
-  startDate,
-  endDate,
-  onStartDateChange,
-  onEndDateChange,
-  onSetDateRange,
+  selectedDate,
+  onDateChange,
+  onShiftDate,
   onCapturePng,
   isCapturing,
+  onCopyReportWithPhoto,
+  isCopying,
   onOpenNewModal,
   onOpenSheetsModal,
   onSyncDirect,
@@ -89,85 +91,81 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   ];
 
   const handleSetToday = () => {
-    onSetDateRange('2026-10-25', '2026-10-25');
+    onDateChange('2026-10-25');
   };
 
   const handleSetYesterday = () => {
-    onSetDateRange('2026-10-24', '2026-10-24');
-  };
-
-  const handleSetLast7Days = () => {
-    onSetDateRange('2026-10-19', '2026-10-25');
+    onDateChange('2026-10-24');
   };
 
   const handleSetAllDates = () => {
-    onSetDateRange('', '');
+    onDateChange('');
   };
 
-  const isTodayActive = startDate === '2026-10-25' && endDate === '2026-10-25';
-  const isAllDatesActive = !startDate && !endDate;
+  const isTodayActive = selectedDate === '2026-10-25';
+  const isAllDatesActive = !selectedDate;
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs space-y-3.5">
-      {/* 1. Fila Superior: Filtro de Rango de Fechas (Desde - Hasta) + Botonera Ejecutiva */}
+      {/* 1. Fila Superior: Filtro de Fecha por Día + Botonera Ejecutiva */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
-        {/* Selector de Rango de Fechas (Desde - Hasta) */}
+        {/* Selector de Fecha Por Día (con navegación ◀ / ▶) */}
         <div className="flex items-center gap-2 flex-wrap">
-          <div className="flex items-center gap-1.5 bg-slate-100/90 border border-slate-300 rounded-xl p-1.5 text-xs shadow-2xs">
-            <span className="px-2 font-bold text-slate-800 flex items-center gap-1">
+          <div className="flex items-center gap-1.5 bg-slate-100 border border-slate-300 rounded-xl p-1.5 text-xs shadow-2xs">
+            <span className="px-2 font-bold text-slate-800 flex items-center gap-1.5">
               <Calendar className="w-3.5 h-3.5 text-blue-600" />
-              Rango de Fecha:
+              Fecha:
             </span>
 
-            {/* Fecha Desde */}
-            <div className="flex items-center gap-1 bg-white px-2 py-1 rounded-lg border border-slate-300">
-              <label htmlFor="filter-start-date" className="text-[10px] uppercase font-bold text-slate-500">
-                Desde:
-              </label>
+            {/* Botón día anterior */}
+            <button
+              onClick={() => onShiftDate(-1)}
+              className="p-1 hover:bg-slate-200 rounded text-slate-700 transition cursor-pointer"
+              title="Ir al día anterior (-1 día)"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+
+            {/* Input de Fecha Específica */}
+            <div className="bg-white px-2.5 py-1 rounded-lg border border-slate-300 flex items-center gap-1.5">
               <input
-                id="filter-start-date"
+                id="filter-single-date"
                 type="date"
-                value={startDate}
-                onChange={(e) => onStartDateChange(e.target.value)}
-                className="bg-transparent text-xs font-mono font-semibold text-slate-900 focus:outline-none cursor-pointer"
-                title="Fecha inicio del reporte"
+                value={selectedDate}
+                onChange={(e) => onDateChange(e.target.value)}
+                className="bg-transparent text-xs font-mono font-bold text-slate-900 focus:outline-none cursor-pointer"
+                title="Filtrar despachos por día"
               />
             </div>
 
-            {/* Fecha Hasta */}
-            <div className="flex items-center gap-1 bg-white px-2 py-1 rounded-lg border border-slate-300">
-              <label htmlFor="filter-end-date" className="text-[10px] uppercase font-bold text-slate-500">
-                Hasta:
-              </label>
-              <input
-                id="filter-end-date"
-                type="date"
-                value={endDate}
-                onChange={(e) => onEndDateChange(e.target.value)}
-                className="bg-transparent text-xs font-mono font-semibold text-slate-900 focus:outline-none cursor-pointer"
-                title="Fecha final del reporte"
-              />
-            </div>
+            {/* Botón día siguiente */}
+            <button
+              onClick={() => onShiftDate(1)}
+              className="p-1 hover:bg-slate-200 rounded text-slate-700 transition cursor-pointer"
+              title="Ir al día siguiente (+1 día)"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
           </div>
 
-          {/* Botones de Acceso Rápido a Fechas */}
+          {/* Botones de Selección Rápida */}
           <div className="flex items-center gap-1">
             <button
               onClick={handleSetToday}
-              className={`px-2.5 py-1.5 text-xs font-bold rounded-lg border transition cursor-pointer ${
+              className={`px-3 py-1.5 text-xs font-bold rounded-lg border transition cursor-pointer ${
                 isTodayActive
                   ? 'bg-blue-600 text-white border-blue-600 shadow-2xs'
                   : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
               }`}
-              title="Filtrar despachos del día de hoy (25 Octubre)"
+              title="Filtrar despachos de hoy (25 Octubre)"
             >
-              Hoy
+              Hoy (25 Oct)
             </button>
 
             <button
               onClick={handleSetYesterday}
-              className={`px-2.5 py-1.5 text-xs font-semibold rounded-lg border transition cursor-pointer ${
-                startDate === '2026-10-24' && endDate === '2026-10-24'
+              className={`px-3 py-1.5 text-xs font-semibold rounded-lg border transition cursor-pointer ${
+                selectedDate === '2026-10-24'
                   ? 'bg-blue-600 text-white border-blue-600 shadow-2xs'
                   : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
               }`}
@@ -177,33 +175,32 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             </button>
 
             <button
-              onClick={handleSetLast7Days}
-              className={`px-2.5 py-1.5 text-xs font-semibold rounded-lg border transition cursor-pointer ${
-                startDate === '2026-10-19' && endDate === '2026-10-25'
-                  ? 'bg-blue-600 text-white border-blue-600 shadow-2xs'
-                  : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
-              }`}
-              title="Filtrar despachos de los últimos 7 días"
-            >
-              Últimos 7 días
-            </button>
-
-            <button
               onClick={handleSetAllDates}
-              className={`px-2.5 py-1.5 text-xs font-semibold rounded-lg border transition cursor-pointer ${
+              className={`px-3 py-1.5 text-xs font-semibold rounded-lg border transition cursor-pointer ${
                 isAllDatesActive
                   ? 'bg-slate-900 text-white border-slate-900 shadow-2xs'
                   : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
               }`}
-              title="Ver registros de todas las fechas sin restricción"
+              title="Ver todas las fechas"
             >
-              Ver Todo
+              Ver Todas
             </button>
           </div>
         </div>
 
         {/* Acciones Rápidas Ejecutivas */}
         <div className="flex items-center gap-2 flex-wrap">
+          {/* NUEVO BOTÓN: Copiar Reporte con Foto al Portapapeles */}
+          <button
+            onClick={onCopyReportWithPhoto}
+            disabled={isCopying}
+            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-blue-700 hover:bg-blue-800 text-white text-xs font-bold rounded-lg transition shadow-2xs cursor-pointer disabled:opacity-50"
+            title="Copiar imagen del cuadro y resumen al portapapeles para pegar directo (Ctrl+V) en WhatsApp"
+          >
+            <Copy className={`w-3.5 h-3.5 text-blue-200 ${isCopying ? 'animate-pulse' : ''}`} />
+            <span>{isCopying ? 'Copiando foto...' : '📋 Copiar con Foto'}</span>
+          </button>
+
           {/* Sincronizar Google Sheet */}
           <button
             onClick={onSyncDirect}
@@ -223,7 +220,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             title="Descargar imagen PNG para enviar por WhatsApp o correo a Gerencia"
           >
             <Camera className="w-3.5 h-3.5 text-blue-200" />
-            <span>{isCapturing ? 'Generando...' : '📷 Capturar para Gerencia'}</span>
+            <span>{isCapturing ? 'Generando...' : '📷 Capturar PNG'}</span>
           </button>
 
           {/* Enviar Reporte a WhatsApp Gerencia con Modal Interactivo */}

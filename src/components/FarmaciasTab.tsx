@@ -15,29 +15,32 @@ import {
   Store,
   FileSpreadsheet,
   Calendar,
-  Camera
+  Camera,
+  Copy,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 
 interface FarmaciasTabProps {
   deliveries: DeliveryItem[];
-  startDate: string;
-  endDate: string;
-  onStartDateChange: (date: string) => void;
-  onEndDateChange: (date: string) => void;
-  onSetDateRange: (start: string, end: string) => void;
+  selectedDate: string;
+  onDateChange: (date: string) => void;
+  onShiftDate: (days: number) => void;
   onCapturePng?: () => void;
   isCapturing?: boolean;
+  onCopyReportWithPhoto?: () => void;
+  isCopying?: boolean;
 }
 
 export const FarmaciasTab: React.FC<FarmaciasTabProps> = ({
   deliveries,
-  startDate,
-  endDate,
-  onStartDateChange,
-  onEndDateChange,
-  onSetDateRange,
+  selectedDate,
+  onDateChange,
+  onShiftDate,
   onCapturePng,
-  isCapturing = false
+  isCapturing = false,
+  onCopyReportWithPhoto,
+  isCopying = false
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedHubFilter, setSelectedHubFilter] = useState<'all' | 'santodomingo' | 'santiago'>('all');
@@ -346,52 +349,52 @@ export const FarmaciasTab: React.FC<FarmaciasTabProps> = ({
         </div>
       </div>
 
-      {/* Barra de Filtro de Fechas (Desde - Hasta) en Pestaña 2 */}
+      {/* Barra de Filtro de Fechas (Por Día) en Pestaña 2 */}
       <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2 flex-wrap">
-          <div className="flex items-center gap-1.5 bg-slate-100/90 border border-slate-300 rounded-xl p-1.5 text-xs shadow-2xs">
-            <span className="px-2 font-bold text-slate-800 flex items-center gap-1">
+          <div className="flex items-center gap-1.5 bg-slate-100 border border-slate-300 rounded-xl p-1.5 text-xs shadow-2xs">
+            <span className="px-2 font-bold text-slate-800 flex items-center gap-1.5">
               <Calendar className="w-3.5 h-3.5 text-emerald-600" />
-              Filtrar por Fecha:
+              Fecha:
             </span>
 
-            {/* Fecha Desde */}
-            <div className="flex items-center gap-1 bg-white px-2 py-1 rounded-lg border border-slate-300">
-              <label htmlFor="farmacia-start-date" className="text-[10px] uppercase font-bold text-slate-500">
-                Desde:
-              </label>
+            {/* Botón día anterior */}
+            <button
+              onClick={() => onShiftDate(-1)}
+              className="p-1 hover:bg-slate-200 rounded text-slate-700 transition cursor-pointer"
+              title="Ir al día anterior (-1 día)"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+
+            {/* Fecha Específica */}
+            <div className="bg-white px-2.5 py-1 rounded-lg border border-slate-300 flex items-center gap-1.5">
               <input
-                id="farmacia-start-date"
+                id="farmacia-single-date"
                 type="date"
-                value={startDate}
-                onChange={(e) => onStartDateChange(e.target.value)}
-                className="bg-transparent text-xs font-mono font-semibold text-slate-900 focus:outline-none cursor-pointer"
-                title="Fecha inicio de despachos"
+                value={selectedDate}
+                onChange={(e) => onDateChange(e.target.value)}
+                className="bg-transparent text-xs font-mono font-bold text-slate-900 focus:outline-none cursor-pointer"
+                title="Filtrar despachos por día"
               />
             </div>
 
-            {/* Fecha Hasta */}
-            <div className="flex items-center gap-1 bg-white px-2 py-1 rounded-lg border border-slate-300">
-              <label htmlFor="farmacia-end-date" className="text-[10px] uppercase font-bold text-slate-500">
-                Hasta:
-              </label>
-              <input
-                id="farmacia-end-date"
-                type="date"
-                value={endDate}
-                onChange={(e) => onEndDateChange(e.target.value)}
-                className="bg-transparent text-xs font-mono font-semibold text-slate-900 focus:outline-none cursor-pointer"
-                title="Fecha final de despachos"
-              />
-            </div>
+            {/* Botón día siguiente */}
+            <button
+              onClick={() => onShiftDate(1)}
+              className="p-1 hover:bg-slate-200 rounded text-slate-700 transition cursor-pointer"
+              title="Ir al día siguiente (+1 día)"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
           </div>
 
           {/* Botones de selección rápida */}
           <div className="flex items-center gap-1">
             <button
-              onClick={() => onSetDateRange('2026-10-25', '2026-10-25')}
-              className={`px-2.5 py-1.5 text-xs font-bold rounded-lg border transition cursor-pointer ${
-                startDate === '2026-10-25' && endDate === '2026-10-25'
+              onClick={() => onDateChange('2026-10-25')}
+              className={`px-3 py-1.5 text-xs font-bold rounded-lg border transition cursor-pointer ${
+                selectedDate === '2026-10-25'
                   ? 'bg-emerald-600 text-white border-emerald-600 shadow-2xs'
                   : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
               }`}
@@ -399,9 +402,9 @@ export const FarmaciasTab: React.FC<FarmaciasTabProps> = ({
               Hoy (25 Oct)
             </button>
             <button
-              onClick={() => onSetDateRange('2026-10-24', '2026-10-24')}
-              className={`px-2.5 py-1.5 text-xs font-semibold rounded-lg border transition cursor-pointer ${
-                startDate === '2026-10-24' && endDate === '2026-10-24'
+              onClick={() => onDateChange('2026-10-24')}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-lg border transition cursor-pointer ${
+                selectedDate === '2026-10-24'
                   ? 'bg-emerald-600 text-white border-emerald-600 shadow-2xs'
                   : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
               }`}
@@ -409,33 +412,21 @@ export const FarmaciasTab: React.FC<FarmaciasTabProps> = ({
               Ayer
             </button>
             <button
-              onClick={() => onSetDateRange('2026-10-19', '2026-10-25')}
-              className={`px-2.5 py-1.5 text-xs font-semibold rounded-lg border transition cursor-pointer ${
-                startDate === '2026-10-19' && endDate === '2026-10-25'
-                  ? 'bg-emerald-600 text-white border-emerald-600 shadow-2xs'
-                  : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
-              }`}
-            >
-              Últimos 7 días
-            </button>
-            <button
-              onClick={() => onSetDateRange('', '')}
-              className={`px-2.5 py-1.5 text-xs font-semibold rounded-lg border transition cursor-pointer ${
-                !startDate && !endDate
+              onClick={() => onDateChange('')}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-lg border transition cursor-pointer ${
+                !selectedDate
                   ? 'bg-slate-900 text-white border-slate-900 shadow-2xs'
                   : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
               }`}
             >
-              Ver Todo
+              Ver Todas
             </button>
           </div>
         </div>
 
-        <div className="text-xs text-slate-500 font-mono">
-          {startDate && endDate && startDate === endDate ? (
-            <span>📅 Fecha activa: <strong className="text-slate-800">{startDate}</strong></span>
-          ) : startDate && endDate ? (
-            <span>📅 Período: <strong className="text-slate-800">{startDate}</strong> al <strong className="text-slate-800">{endDate}</strong></span>
+        <div className="text-xs text-slate-600 font-mono">
+          {selectedDate ? (
+            <span>📅 Mostrando despachos del día: <strong className="text-slate-900">{selectedDate}</strong></span>
           ) : (
             <span>📅 Mostrando todos los registros</span>
           )}
@@ -472,9 +463,9 @@ export const FarmaciasTab: React.FC<FarmaciasTabProps> = ({
           </button>
         </div>
 
-        {/* Search & Capture Action */}
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <div className="relative flex-1 sm:w-72">
+        {/* Search & Actions */}
+        <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap justify-end">
+          <div className="relative flex-1 sm:w-64">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
@@ -485,15 +476,27 @@ export const FarmaciasTab: React.FC<FarmaciasTabProps> = ({
             />
           </div>
 
+          {onCopyReportWithPhoto && (
+            <button
+              onClick={onCopyReportWithPhoto}
+              disabled={isCopying}
+              className="px-3 py-1.5 text-xs font-bold text-white bg-blue-700 hover:bg-blue-800 rounded-lg transition-colors whitespace-nowrap shadow-2xs inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shrink-0"
+              title="Copiar imagen del cuadro y resumen al portapapeles para WhatsApp (Ctrl+V)"
+            >
+              <Copy className={`w-3.5 h-3.5 text-blue-200 ${isCopying ? 'animate-pulse' : ''}`} />
+              <span>{isCopying ? 'Copiando...' : '📋 Copiar con Foto'}</span>
+            </button>
+          )}
+
           {onCapturePng && (
             <button
               onClick={onCapturePng}
               disabled={isCapturing}
-              className="px-3.5 py-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors whitespace-nowrap shadow-2xs inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shrink-0"
+              className="px-3 py-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors whitespace-nowrap shadow-2xs inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shrink-0"
               title="Descargar imagen PNG del cuadro de farmacias y pedidos"
             >
               <Camera className="w-3.5 h-3.5" />
-              <span>{isCapturing ? 'Capturando...' : '📷 Capturar Cuadro'}</span>
+              <span>{isCapturing ? 'Capturando...' : '📷 Capturar PNG'}</span>
             </button>
           )}
         </div>
@@ -511,9 +514,7 @@ export const FarmaciasTab: React.FC<FarmaciasTabProps> = ({
               </h2>
             </div>
             <p className="text-xs text-slate-400 font-mono mt-0.5">
-              {startDate && endDate 
-                ? (startDate === endDate ? `Fecha: ${startDate}` : `Período: ${startDate} al ${endDate}`)
-                : 'Todas las Fechas'} · Sedes Santo Domingo &amp; Santiago
+              Fecha: {selectedDate || 'Todas las Fechas'} · Sedes Santo Domingo &amp; Santiago
             </p>
           </div>
           <div className="flex items-center gap-2 font-mono text-xs">

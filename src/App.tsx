@@ -26,7 +26,7 @@ import { GoogleSheetsModal } from './components/GoogleSheetsModal';
 import { ColumnVisibilityModal } from './components/ColumnVisibilityModal';
 import { WhatsAppModal } from './components/WhatsAppModal';
 import { exportDeliveriesToCSV, normalizeDateString } from './utils/csvHelper';
-import { captureReportToPng } from './utils/captureHelper';
+import { captureReportToPng, copyReportImageToClipboard } from './utils/captureHelper';
 import { exportSingleFileHtml } from './utils/standaloneExporter';
 import { 
   DEFAULT_SHEET_URL, 
@@ -49,7 +49,8 @@ import {
   Clock,
   SlidersHorizontal,
   MessageSquare,
-  Store
+  Store,
+  Copy
 } from 'lucide-react';
 
 const STORAGE_KEY = 'rd_despachos_report_data_v4';
@@ -58,12 +59,32 @@ const VISIBLE_COLUMNS_KEY = 'rd_despachos_visible_columns_v4';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'consolidado' | 'farmacias'>('consolidado');
-  const [startDate, setStartDate] = useState<string>('2026-10-25');
-  const [endDate, setEndDate] = useState<string>('2026-10-25');
+  const [selectedDate, setSelectedDate] = useState<string>('2026-10-25');
+  const [isCopying, setIsCopying] = useState(false);
 
-  const handleSetDateRange = (start: string, end: string) => {
-    setStartDate(start);
-    setEndDate(end);
+  const handleShiftDate = (days: number) => {
+    if (!selectedDate) {
+      setSelectedDate('2026-10-25');
+      return;
+    }
+    try {
+      const parts = selectedDate.split('-');
+      if (parts.length === 3) {
+        const year = parseInt(parts[0], 10);
+        const month = parseInt(parts[1], 10) - 1;
+        const day = parseInt(parts[2], 10);
+        const d = new Date(year, month, day);
+        d.setDate(d.getDate() + days);
+        const newYear = d.getFullYear();
+        const newMonth = String(d.getMonth() + 1).padStart(2, '0');
+        const newDay = String(d.getDate()).padStart(2, '0');
+        const nextStr = `${newYear}-${newMonth}-${newDay}`;
+        setSelectedDate(nextStr);
+        showToast(`Fecha seleccionada: ${nextStr}`);
+      }
+    } catch {
+      // fallback
+    }
   };
 
   // Load deliveries from localStorage or fallback to initial mock data
@@ -266,18 +287,15 @@ export default function App() {
     handleDirectSheetSync(false);
   }, []);
 
-  // Filter deliveries by date range (Desde - Hasta), unified Hub (SD / STI), service type, status, and search query
+  // Filter deliveries by single day (por día solo), unified Hub (SD / STI), service type, status, and search query
   const filteredDeliveries = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
 
     return deliveries.filter((item) => {
-      // Date range filter (Desde - Hasta)
-      if (startDate || endDate) {
+      // Single day filter ("por día solo")
+      if (selectedDate) {
         const itemNormDate = normalizeDateString(item.fecha);
-        if (startDate && itemNormDate && itemNormDate < startDate) {
-          return false;
-        }
-        if (endDate && itemNormDate && itemNormDate > endDate) {
+        if (itemNormDate && itemNormDate !== selectedDate) {
           return false;
         }
       }
@@ -311,13 +329,15 @@ export default function App() {
         const matchUnidad = (item.unidad || '').toLowerCase().includes(query);
         const matchObs = (item.observacion || '').toLowerCase().includes(query);
         const matchAyudante = (item.ayudante || '').toLowerCase().includes(query);
-        if (!matchChofer && !matchProvincia && !matchUnidad && !matchObs && !matchAyudante) {
+        const matchFarmacia = (item.farmacia || '').toLowerCase().includes(query);
+        const matchPedido = (item.numeroPedido || '').toLowerCase().includes(query);
+        if (!matchChofer && !matchProvincia && !matchUnidad && !matchObs && !matchAyudante && !matchFarmacia && !matchPedido) {
           return false;
         }
       }
       return true;
     });
-  }, [deliveries, startDate, endDate, selectedHub, selectedService, statusFilter, searchQuery]);
+  }, [deliveries, selectedDate, selectedHub, selectedService, statusFilter, searchQuery]);
 
   // Overall KPIs
   const kpis: KPIData = useMemo(() => {
@@ -412,10 +432,9 @@ export default function App() {
     setSelectedHub('all');
     setSelectedService('all');
     setStatusFilter('all');
-    setStartDate('2026-10-25');
-    setEndDate('2026-10-25');
+    setSelectedDate('2026-10-25');
     setSearchQuery('');
-    showToast('Filtros restablecidos al consolidado nacional.');
+    showToast('Filtros restablecidos al día de hoy.');
   };
 
   const handleImportData = (items: DeliveryItem[], mode: 'replace' | 'append') => {
@@ -436,9 +455,7 @@ export default function App() {
     const tabName = isFarmaciasTab ? 'Farmacias' : 'Consolidado';
     showToast(`Generando captura en imagen PNG (${tabName})...`);
     try {
-      const dateTag = startDate && endDate
-        ? (startDate === endDate ? startDate : `${startDate}_al_${endDate}`)
-        : 'Consolidado';
+      const dateTag = selectedDate || 'Todas_Las_Fechas';
       const fileName = `Reporte_${tabName}_Despachos_RD_${dateTag}.png`;
       const success = await captureReportToPng(targetElementId, dateTag, fileName);
       if (success) {
@@ -451,6 +468,33 @@ export default function App() {
       showToast('Ocurrió un error al capturar la imagen.');
     } finally {
       setIsCapturing(false);
+    }
+  };
+
+  // NEW: Copy Report with Photo directly to clipboard for instant Ctrl+V into WhatsApp Web, Word, Slack
+  const handleCopyReportWithPhoto = async () => {
+    setIsCopying(true);
+    const isFarmaciasTab = activeTab === 'farmacias';
+    const targetElementId = isFarmaciasTab ? 'area-captura-farmacias' : 'area-captura';
+    const tabName = isFarmaciasTab ? 'Farmacias y Pedidos' : 'Reporte Consolidado';
+    showToast(`Copiando cuadro de ${tabName} al portapapeles...`);
+
+    const summaryText = `📊 *REPORTE DIARIO DE ENTREGAS Y DESPACHOS RD*\n` +
+      `📅 Fecha: ${selectedDate || 'Todas las fechas'}\n` +
+      `🚛 Total Despachos: ${kpis.totalEntregas}\n` +
+      `📦 Total Bultos: ${kpis.totalBultos}\n` +
+      `✅ Entregados: ${kpis.totalEntregados} | ⏳ Pendientes: ${kpis.totalPendientes}\n` +
+      `📈 Efectividad Global: ${kpis.porcentajeCompletado}%\n\n` +
+      `📌 *Adjunto cuadro gráfico generado desde el sistema.*`;
+
+    try {
+      const res = await copyReportImageToClipboard(targetElementId, summaryText);
+      showToast(res.message);
+    } catch (err) {
+      console.error(err);
+      showToast('Error al copiar el reporte al portapapeles.');
+    } finally {
+      setIsCopying(false);
     }
   };
 
@@ -540,7 +584,18 @@ export default function App() {
               title="Descargar imagen PNG para WhatsApp"
             >
               <Camera className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">📷 Capturar para Gerencia</span>
+              <span className="hidden sm:inline">📷 Capturar PNG</span>
+            </button>
+
+            {/* BOTÓN NUEVO: Copiar Reporte con Foto para WhatsApp / Portapapeles */}
+            <button
+              onClick={handleCopyReportWithPhoto}
+              disabled={isCopying}
+              className="px-3.5 py-1.5 text-xs font-bold text-white bg-blue-700 hover:bg-blue-800 rounded-lg transition-colors whitespace-nowrap shadow-2xs inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              title="Copiar reporte y foto al portapapeles (Ctrl+V en WhatsApp)"
+            >
+              <Copy className={`w-3.5 h-3.5 text-blue-200 ${isCopying ? 'animate-pulse' : ''}`} />
+              <span className="hidden sm:inline">📋 Copiar con Foto</span>
             </button>
 
             <button
@@ -589,7 +644,7 @@ export default function App() {
             <span className="font-mono text-slate-500 text-[11px]">ID: 1X7xtW4YrjEv43t1byX6CjMFxh4UKsZft00KQJuXEroc</span>
             <span className="text-slate-300 hidden sm:inline">|</span>
             <span className="text-slate-600 font-semibold">
-              {filteredDeliveries.length} unidades activas en visualización
+              {filteredDeliveries.length} unidades activas ({selectedDate || 'Todas las fechas'})
             </span>
           </div>
 
@@ -658,13 +713,13 @@ export default function App() {
                 onSelectStatus={setStatusFilter}
                 searchQuery={searchQuery}
                 onSearchChange={setSearchQuery}
-                startDate={startDate}
-                endDate={endDate}
-                onStartDateChange={setStartDate}
-                onEndDateChange={setEndDate}
-                onSetDateRange={handleSetDateRange}
+                selectedDate={selectedDate}
+                onDateChange={setSelectedDate}
+                onShiftDate={handleShiftDate}
                 onCapturePng={handleCapturePng}
                 isCapturing={isCapturing}
+                onCopyReportWithPhoto={handleCopyReportWithPhoto}
+                isCopying={isCopying}
                 onOpenNewModal={() => {
                   setEditingItem(null);
                   setDefaultBlockForNew(selectedHub === 'santiago' ? 'santiago_propia' : 'santodomingo_propia');
@@ -687,8 +742,7 @@ export default function App() {
             <section aria-label="Tabla Maestra Unificada por Sedes">
               <MasterExecutiveTable
                 deliveries={filteredDeliveries}
-                startDate={startDate}
-                endDate={endDate}
+                selectedDate={selectedDate}
                 visibleColumns={visibleColumns}
                 onToggleStatus={handleToggleStatus}
                 onEditItem={handleEditDelivery}
@@ -703,13 +757,13 @@ export default function App() {
           <section aria-label="Detalle de Farmacias y Pedidos por Sede">
             <FarmaciasTab
               deliveries={filteredDeliveries}
-              startDate={startDate}
-              endDate={endDate}
-              onStartDateChange={setStartDate}
-              onEndDateChange={setEndDate}
-              onSetDateRange={handleSetDateRange}
+              selectedDate={selectedDate}
+              onDateChange={setSelectedDate}
+              onShiftDate={handleShiftDate}
               onCapturePng={handleCapturePng}
               isCapturing={isCapturing}
+              onCopyReportWithPhoto={handleCopyReportWithPhoto}
+              isCopying={isCopying}
             />
           </section>
         )}
@@ -723,6 +777,15 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-3">
+            <button
+              onClick={handleCopyReportWithPhoto}
+              disabled={isCopying}
+              className="font-bold text-blue-700 hover:text-blue-900 inline-flex items-center gap-1 cursor-pointer"
+            >
+              <Copy className="w-3.5 h-3.5" />
+              Copiar con Foto
+            </button>
+            <span>·</span>
             <button
               onClick={() => setIsWhatsAppModalOpen(true)}
               className="font-bold text-emerald-700 hover:text-emerald-900 inline-flex items-center gap-1 cursor-pointer"
@@ -776,7 +839,7 @@ export default function App() {
         onSave={handleSaveDelivery}
         initialItem={editingItem}
         defaultBlockId={defaultBlockForNew}
-        defaultDate={startDate || new Date().toISOString().slice(0, 10)}
+        defaultDate={selectedDate || new Date().toISOString().slice(0, 10)}
       />
 
       {/* Google Sheets / CSV Modal */}
@@ -803,8 +866,7 @@ export default function App() {
         isOpen={isWhatsAppModalOpen}
         onClose={() => setIsWhatsAppModalOpen(false)}
         deliveries={filteredDeliveries}
-        startDate={startDate}
-        endDate={endDate}
+        selectedDate={selectedDate}
         kpis={kpis}
       />
     </div>

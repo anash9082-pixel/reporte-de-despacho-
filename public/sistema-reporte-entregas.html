@@ -41,46 +41,51 @@
                 </div>
             </div>
 
-            <!-- Controles: Selector de Fecha (Desde - Hasta), Sincronización, Captura y WhatsApp -->
+            <!-- Controles: Selector de Fecha por Día Solo, Sincronización, Copiar con Foto, Captura y WhatsApp -->
             <div class="flex flex-wrap items-center gap-2.5 w-full lg:w-auto justify-end">
-                <!-- Selector de Rango de Fechas Flexible (Desde - Hasta) -->
+                <!-- Selector de Fecha Por Día Solo (con navegación ◀ / ▶) -->
                 <div class="flex items-center gap-1.5 bg-slate-900 border border-slate-700 px-3 py-1.5 rounded-lg text-xs shadow-xs flex-wrap">
                     <span class="flex items-center gap-1 text-slate-300 font-bold">
                         <i data-lucide="calendar" class="w-3.5 h-3.5 text-blue-400"></i>
-                        <span>Desde:</span>
+                        <span>Fecha:</span>
                     </span>
-                    <input type="date" id="filtro-fecha-desde" onchange="sincronizarFechas('header')" class="bg-slate-800 text-white font-mono px-2 py-0.5 rounded border border-slate-600 text-xs focus:outline-none cursor-pointer" title="Fecha inicial">
-                    <span class="text-slate-300 font-bold ml-1">Hasta:</span>
-                    <input type="date" id="filtro-fecha-hasta" onchange="sincronizarFechas('header')" class="bg-slate-800 text-white font-mono px-2 py-0.5 rounded border border-slate-600 text-xs focus:outline-none cursor-pointer" title="Fecha final">
-                    <button onclick="setRangoHoy()" class="text-blue-400 hover:text-blue-300 font-bold ml-1 cursor-pointer">Hoy</button>
+                    <button onclick="cambiarDia(-1)" class="px-1.5 py-0.5 hover:bg-slate-800 rounded text-slate-300 font-bold cursor-pointer" title="Día anterior">◀</button>
+                    <input type="date" id="filtro-fecha-dia" onchange="sincronizarFechaDia(this.value)" class="bg-slate-800 text-white font-mono px-2 py-0.5 rounded border border-slate-600 text-xs focus:outline-none cursor-pointer" title="Filtrar por día">
+                    <button onclick="cambiarDia(1)" class="px-1.5 py-0.5 hover:bg-slate-800 rounded text-slate-300 font-bold cursor-pointer" title="Día siguiente">▶</button>
+                    <button onclick="setDiaHoy()" class="text-blue-400 hover:text-blue-300 font-bold ml-1 cursor-pointer">Hoy</button>
                     <span class="text-slate-600">|</span>
-                    <button onclick="setRango7Dias()" class="text-blue-300 hover:text-white font-medium cursor-pointer">7D</button>
+                    <button onclick="setDiaAyer()" class="text-blue-300 hover:text-white font-medium cursor-pointer">Ayer</button>
                     <span class="text-slate-600">|</span>
                     <button onclick="verTodasLasFechas()" class="text-slate-400 hover:text-white cursor-pointer">Todas</button>
                 </div>
 
                 <!-- Botón de Sincronizar Google Sheet -->
-                <button onclick="cargarDatosSheet(true)" id="btn-sync" class="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 px-3.5 py-2 rounded-lg text-xs font-semibold transition shadow-xs cursor-pointer">
+                <button onclick="cargarDatosSheet(true)" id="btn-sync" class="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 px-3 py-2 rounded-lg text-xs font-semibold transition shadow-xs cursor-pointer">
                     <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-blue-400"></i>
                     <span>Sincronizar Sheet</span>
                 </button>
 
-                <!-- Botón Configurar Enlace Sheet -->
-                <button onclick="abrirModalSheet()" class="flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 px-3 py-2 rounded-lg text-xs font-semibold transition cursor-pointer" title="Configurar Enlace de Google Sheet">
-                    <i data-lucide="settings" class="w-3.5 h-3.5"></i>
-                    <span class="hidden sm:inline">Configurar</span>
+                <!-- NUEVO BOTÓN: Copiar Reporte con Foto Directo al Portapapeles (Ctrl+V) -->
+                <button onclick="copiarReporteConFoto()" id="btn-copiar-foto" class="flex items-center gap-2 bg-blue-700 hover:bg-blue-800 text-white px-3.5 py-2 rounded-lg text-xs font-bold transition shadow-xs cursor-pointer" title="Copiar cuadro gráfico y texto al portapapeles para pegar directo con Ctrl+V en WhatsApp">
+                    <i data-lucide="copy" class="w-4 h-4 text-blue-200"></i>
+                    <span>📋 Copiar con Foto</span>
                 </button>
 
-                <!-- Botón Capturar Imagen para Gerencia (html2canvas) -->
-                <button onclick="capturarImagen()" id="btn-captura" class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-xs font-bold transition shadow-xs cursor-pointer">
+                <!-- Botón Capturar Imagen para Gerencia (PNG) -->
+                <button onclick="capturarImagen()" id="btn-captura" class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-2 rounded-lg text-xs font-bold transition shadow-xs cursor-pointer">
                     <i data-lucide="camera" class="w-4 h-4 text-blue-200"></i>
-                    <span>📷 Capturar Imagen</span>
+                    <span>📷 Capturar PNG</span>
                 </button>
 
                 <!-- Botón WhatsApp Gerencia -->
                 <button onclick="abrirModalWhatsApp()" id="btn-whatsapp" class="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 rounded-lg text-xs font-bold transition shadow-xs cursor-pointer">
                     <i data-lucide="message-square" class="w-4 h-4 text-emerald-100"></i>
                     <span>💬 WhatsApp Gerencia</span>
+                </button>
+
+                <!-- Botón Configurar Enlace Sheet -->
+                <button onclick="abrirModalSheet()" class="flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 px-2.5 py-2 rounded-lg text-xs font-semibold transition cursor-pointer" title="Configurar Enlace de Google Sheet">
+                    <i data-lucide="settings" class="w-3.5 h-3.5"></i>
                 </button>
             </div>
         </header>
@@ -129,32 +134,26 @@
                 </div>
             </div>
 
-            <!-- Barra de Filtro de Fechas (Desde - Hasta) para Pestaña 1 -->
+            <!-- Barra de Filtro de Fechas (Por Día Solo) para Pestaña 1 -->
             <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-xs flex flex-wrap items-center justify-between gap-3 no-print">
                 <div class="flex items-center gap-2 flex-wrap">
                     <div class="flex items-center gap-1.5 bg-slate-100 border border-slate-300 rounded-lg p-1.5 text-xs">
                         <span class="px-2 font-bold text-slate-800 flex items-center gap-1">
                             <i data-lucide="calendar" class="w-3.5 h-3.5 text-blue-600"></i>
-                            Filtrar por Fecha:
+                            Fecha:
                         </span>
-                        <div class="flex items-center gap-1 bg-white px-2 py-0.5 rounded border border-slate-300">
-                            <label class="text-[10px] uppercase font-bold text-slate-500">Desde:</label>
-                            <input type="date" id="filtro-consolidado-desde" onchange="sincronizarFechas('consolidado')" class="bg-transparent font-mono text-xs text-slate-900 focus:outline-none cursor-pointer">
-                        </div>
-                        <div class="flex items-center gap-1 bg-white px-2 py-0.5 rounded border border-slate-300">
-                            <label class="text-[10px] uppercase font-bold text-slate-500">Hasta:</label>
-                            <input type="date" id="filtro-consolidado-hasta" onchange="sincronizarFechas('consolidado')" class="bg-transparent font-mono text-xs text-slate-900 focus:outline-none cursor-pointer">
-                        </div>
+                        <button onclick="cambiarDia(-1)" class="px-1.5 py-0.5 hover:bg-slate-200 rounded text-slate-700 font-bold cursor-pointer" title="Día anterior">◀</button>
+                        <input type="date" id="filtro-consolidado-dia" onchange="sincronizarFechaDia(this.value)" class="bg-white font-mono text-xs text-slate-900 px-2 py-0.5 rounded border border-slate-300 focus:outline-none cursor-pointer" title="Filtrar despachos por día">
+                        <button onclick="cambiarDia(1)" class="px-1.5 py-0.5 hover:bg-slate-200 rounded text-slate-700 font-bold cursor-pointer" title="Día siguiente">▶</button>
                     </div>
                     <div class="flex items-center gap-1">
-                        <button onclick="setRangoHoy()" class="px-2.5 py-1 text-xs font-bold rounded-lg border bg-white border-slate-300 hover:bg-slate-100 text-slate-700 cursor-pointer">Hoy</button>
-                        <button onclick="setRangoAyer()" class="px-2.5 py-1 text-xs font-semibold rounded-lg border bg-white border-slate-300 hover:bg-slate-100 text-slate-700 cursor-pointer">Ayer</button>
-                        <button onclick="setRango7Dias()" class="px-2.5 py-1 text-xs font-semibold rounded-lg border bg-white border-slate-300 hover:bg-slate-100 text-slate-700 cursor-pointer">Últimos 7 días</button>
-                        <button onclick="verTodasLasFechas()" class="px-2.5 py-1 text-xs font-semibold rounded-lg border bg-white border-slate-300 hover:bg-slate-100 text-slate-700 cursor-pointer">Ver Todo</button>
+                        <button onclick="setDiaHoy()" class="px-2.5 py-1 text-xs font-bold rounded-lg border bg-white border-slate-300 hover:bg-slate-100 text-slate-700 cursor-pointer">Hoy (25 Oct)</button>
+                        <button onclick="setDiaAyer()" class="px-2.5 py-1 text-xs font-semibold rounded-lg border bg-white border-slate-300 hover:bg-slate-100 text-slate-700 cursor-pointer">Ayer</button>
+                        <button onclick="verTodasLasFechas()" class="px-2.5 py-1 text-xs font-semibold rounded-lg border bg-white border-slate-300 hover:bg-slate-100 text-slate-700 cursor-pointer">Ver Todas</button>
                     </div>
                 </div>
                 <div class="text-xs font-mono text-slate-600" id="label-resumen-rango-consolidado">
-                    📅 Período activo
+                    📅 Día seleccionado
                 </div>
             </div>
 
@@ -211,32 +210,26 @@
         <!-- PESTAÑA 2: DETALLE DE FARMACIAS Y PEDIDOS                 -->
         <!-- ======================================================== -->
         <div id="vista-farmacias" class="space-y-4 hidden">
-            <!-- Barra de Filtro de Fechas (Desde - Hasta) para Pestaña 2 Farmacias -->
+            <!-- Barra de Filtro de Fechas (Por Día Solo) para Pestaña 2 Farmacias -->
             <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-xs flex flex-wrap items-center justify-between gap-3 no-print">
                 <div class="flex items-center gap-2 flex-wrap">
                     <div class="flex items-center gap-1.5 bg-slate-100 border border-slate-300 rounded-lg p-1.5 text-xs">
                         <span class="px-2 font-bold text-slate-800 flex items-center gap-1">
                             <i data-lucide="calendar" class="w-3.5 h-3.5 text-emerald-600"></i>
-                            Filtrar por Fecha:
+                            Fecha:
                         </span>
-                        <div class="flex items-center gap-1 bg-white px-2 py-0.5 rounded border border-slate-300">
-                            <label class="text-[10px] uppercase font-bold text-slate-500">Desde:</label>
-                            <input type="date" id="filtro-farmacia-desde" onchange="sincronizarFechas('farmacia')" class="bg-transparent font-mono text-xs text-slate-900 focus:outline-none cursor-pointer">
-                        </div>
-                        <div class="flex items-center gap-1 bg-white px-2 py-0.5 rounded border border-slate-300">
-                            <label class="text-[10px] uppercase font-bold text-slate-500">Hasta:</label>
-                            <input type="date" id="filtro-farmacia-hasta" onchange="sincronizarFechas('farmacia')" class="bg-transparent font-mono text-xs text-slate-900 focus:outline-none cursor-pointer">
-                        </div>
+                        <button onclick="cambiarDia(-1)" class="px-1.5 py-0.5 hover:bg-slate-200 rounded text-slate-700 font-bold cursor-pointer" title="Día anterior">◀</button>
+                        <input type="date" id="filtro-farmacia-dia" onchange="sincronizarFechaDia(this.value)" class="bg-white font-mono text-xs text-slate-900 px-2 py-0.5 rounded border border-slate-300 focus:outline-none cursor-pointer" title="Filtrar despachos por día">
+                        <button onclick="cambiarDia(1)" class="px-1.5 py-0.5 hover:bg-slate-200 rounded text-slate-700 font-bold cursor-pointer" title="Día siguiente">▶</button>
                     </div>
                     <div class="flex items-center gap-1">
-                        <button onclick="setRangoHoy()" class="px-2.5 py-1 text-xs font-bold rounded-lg border bg-white border-slate-300 hover:bg-slate-100 text-slate-700 cursor-pointer">Hoy</button>
-                        <button onclick="setRangoAyer()" class="px-2.5 py-1 text-xs font-semibold rounded-lg border bg-white border-slate-300 hover:bg-slate-100 text-slate-700 cursor-pointer">Ayer</button>
-                        <button onclick="setRango7Dias()" class="px-2.5 py-1 text-xs font-semibold rounded-lg border bg-white border-slate-300 hover:bg-slate-100 text-slate-700 cursor-pointer">Últimos 7 días</button>
-                        <button onclick="verTodasLasFechas()" class="px-2.5 py-1 text-xs font-semibold rounded-lg border bg-white border-slate-300 hover:bg-slate-100 text-slate-700 cursor-pointer">Ver Todo</button>
+                        <button onclick="setDiaHoy()" class="px-2.5 py-1 text-xs font-bold rounded-lg border bg-white border-slate-300 hover:bg-slate-100 text-slate-700 cursor-pointer">Hoy (25 Oct)</button>
+                        <button onclick="setDiaAyer()" class="px-2.5 py-1 text-xs font-semibold rounded-lg border bg-white border-slate-300 hover:bg-slate-100 text-slate-700 cursor-pointer">Ayer</button>
+                        <button onclick="verTodasLasFechas()" class="px-2.5 py-1 text-xs font-semibold rounded-lg border bg-white border-slate-300 hover:bg-slate-100 text-slate-700 cursor-pointer">Ver Todas</button>
                     </div>
                 </div>
                 <div class="text-xs font-mono text-slate-600" id="label-resumen-rango-farmacia">
-                    📅 Período activo
+                    📅 Día seleccionado
                 </div>
             </div>
 
@@ -404,12 +397,16 @@
 
             <div class="bg-slate-50 px-6 py-4 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
                 <button onclick="cerrarModalWhatsApp()" class="text-xs font-semibold text-slate-600 hover:text-slate-900 cursor-pointer">Cerrar</button>
-                <div class="flex items-center gap-2.5 w-full sm:w-auto">
-                    <button onclick="copiarTextoWhatsApp()" class="flex-1 sm:flex-initial px-4 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 text-xs font-bold rounded-lg transition shadow-xs inline-flex items-center justify-center gap-1.5 cursor-pointer">
-                        <i data-lucide="copy" class="w-3.5 h-3.5"></i>
-                        <span>Copiar Mensaje</span>
+                <div class="flex items-center gap-2.5 w-full sm:w-auto flex-wrap justify-end">
+                    <button onclick="copiarReporteConFoto(generarTextoWhatsApp())" class="flex-1 sm:flex-initial px-3.5 py-2 bg-blue-700 hover:bg-blue-800 text-white text-xs font-bold rounded-lg transition shadow-xs inline-flex items-center justify-center gap-1.5 cursor-pointer" title="Copiar cuadro gráfico y texto al portapapeles">
+                        <i data-lucide="copy" class="w-3.5 h-3.5 text-blue-200"></i>
+                        <span>Copiar Texto + Foto</span>
                     </button>
-                    <button onclick="enviarWhatsApp()" class="flex-1 sm:flex-initial px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-sm transition inline-flex items-center justify-center gap-2 cursor-pointer">
+                    <button onclick="copiarTextoWhatsApp()" class="flex-1 sm:flex-initial px-3.5 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 text-xs font-bold rounded-lg transition shadow-xs inline-flex items-center justify-center gap-1.5 cursor-pointer">
+                        <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                        <span>Copiar Solo Texto</span>
+                    </button>
+                    <button onclick="enviarWhatsApp()" class="flex-1 sm:flex-initial px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-sm transition inline-flex items-center justify-center gap-2 cursor-pointer">
                         <i data-lucide="send" class="w-4 h-4"></i>
                         <span>Enviar a WhatsApp</span>
                     </button>
@@ -611,114 +608,69 @@
             actualizarReporte();
         }
 
-        function sincronizarFechas(origen) {
-            let desde = '';
-            let hasta = '';
+        let FECHA_SELECCIONADA = "2026-10-25";
 
-            if (origen === 'header') {
-                desde = document.getElementById('filtro-fecha-desde')?.value || '';
-                hasta = document.getElementById('filtro-fecha-hasta')?.value || '';
-            } else if (origen === 'consolidado') {
-                desde = document.getElementById('filtro-consolidado-desde')?.value || '';
-                hasta = document.getElementById('filtro-consolidado-hasta')?.value || '';
-            } else if (origen === 'farmacia') {
-                desde = document.getElementById('filtro-farmacia-desde')?.value || '';
-                hasta = document.getElementById('filtro-farmacia-hasta')?.value || '';
+        function sincronizarFechaDia(nuevaFecha) {
+            FECHA_SELECCIONADA = nuevaFecha || '';
+            ['filtro-fecha-dia', 'filtro-consolidado-dia', 'filtro-farmacia-dia'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el && el.value !== FECHA_SELECCIONADA) el.value = FECHA_SELECCIONADA;
+            });
+            actualizarReporte();
+        }
+
+        function cambiarDia(delta) {
+            if (!FECHA_SELECCIONADA) {
+                FECHA_SELECCIONADA = "2026-10-25";
+            } else {
+                try {
+                    const parts = FECHA_SELECCIONADA.split('-');
+                    if (parts.length === 3) {
+                        const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+                        d.setDate(d.getDate() + delta);
+                        const y = d.getFullYear();
+                        const m = String(d.getMonth() + 1).padStart(2, '0');
+                        const dia = String(d.getDate()).padStart(2, '0');
+                        FECHA_SELECCIONADA = `${y}-${m}-${dia}`;
+                    }
+                } catch (e) {
+                    FECHA_SELECCIONADA = "2026-10-25";
+                }
             }
-
-            // Reflejar de inmediato en los 3 grupos de inputs (header, pestaña 1, pestaña 2)
-            ['filtro-fecha-desde', 'filtro-consolidado-desde', 'filtro-farmacia-desde'].forEach(id => {
-                const el = document.getElementById(id);
-                if (el && el.value !== desde) el.value = desde;
-            });
-            ['filtro-fecha-hasta', 'filtro-consolidado-hasta', 'filtro-farmacia-hasta'].forEach(id => {
-                const el = document.getElementById(id);
-                if (el && el.value !== hasta) el.value = hasta;
-            });
-
-            actualizarReporte();
+            sincronizarFechaDia(FECHA_SELECCIONADA);
         }
 
-        function setRangoHoy() {
-            const hoy = "2026-10-25";
-            ['filtro-fecha-desde', 'filtro-consolidado-desde', 'filtro-farmacia-desde'].forEach(id => {
-                const el = document.getElementById(id);
-                if (el) el.value = hoy;
-            });
-            ['filtro-fecha-hasta', 'filtro-consolidado-hasta', 'filtro-farmacia-hasta'].forEach(id => {
-                const el = document.getElementById(id);
-                if (el) el.value = hoy;
-            });
-            actualizarReporte();
+        function setDiaHoy() {
+            sincronizarFechaDia("2026-10-25");
         }
 
-        function setRangoAyer() {
-            const ayer = "2026-10-24";
-            ['filtro-fecha-desde', 'filtro-consolidado-desde', 'filtro-farmacia-desde'].forEach(id => {
-                const el = document.getElementById(id);
-                if (el) el.value = ayer;
-            });
-            ['filtro-fecha-hasta', 'filtro-consolidado-hasta', 'filtro-farmacia-hasta'].forEach(id => {
-                const el = document.getElementById(id);
-                if (el) el.value = ayer;
-            });
-            actualizarReporte();
-        }
-
-        function setRango7Dias() {
-            const desde = "2026-10-19";
-            const hasta = "2026-10-25";
-            ['filtro-fecha-desde', 'filtro-consolidado-desde', 'filtro-farmacia-desde'].forEach(id => {
-                const el = document.getElementById(id);
-                if (el) el.value = desde;
-            });
-            ['filtro-fecha-hasta', 'filtro-consolidado-hasta', 'filtro-farmacia-hasta'].forEach(id => {
-                const el = document.getElementById(id);
-                if (el) el.value = hasta;
-            });
-            actualizarReporte();
+        function setDiaAyer() {
+            sincronizarFechaDia("2026-10-24");
         }
 
         function verTodasLasFechas() {
-            ['filtro-fecha-desde', 'filtro-consolidado-desde', 'filtro-farmacia-desde'].forEach(id => {
-                const el = document.getElementById(id);
-                if (el) el.value = '';
-            });
-            ['filtro-fecha-hasta', 'filtro-consolidado-hasta', 'filtro-farmacia-hasta'].forEach(id => {
-                const el = document.getElementById(id);
-                if (el) el.value = '';
-            });
-            actualizarReporte();
+            sincronizarFechaDia("");
         }
 
         function obtenerFiltros() {
-            const desdeInput = document.getElementById('filtro-fecha-desde')?.value || '';
-            const hastaInput = document.getElementById('filtro-fecha-hasta')?.value || '';
-            const fechaDesdeNorm = desdeInput ? normalizarFecha(desdeInput) : '';
-            const fechaHastaNorm = hastaInput ? normalizarFecha(hastaInput) : '';
+            const fechaNorm = FECHA_SELECCIONADA ? normalizarFecha(FECHA_SELECCIONADA) : '';
             const busqueda = (document.getElementById('busqueda-input')?.value || '').trim().toLowerCase();
-            return { fechaDesdeNorm, fechaHastaNorm, busqueda };
+            return { fechaNorm, busqueda };
         }
 
-        function formatearTextoRango(desde, hasta) {
-            if (desde && hasta) {
-                if (desde === hasta) return `Fecha: ${desde}`;
-                return `Período: ${desde} al ${hasta}`;
-            }
-            if (desde) return `Desde: ${desde}`;
-            if (hasta) return `Hasta: ${hasta}`;
-            return 'Todas las Fechas (Consolidado General)';
+        function formatearTextoFecha(fechaNorm) {
+            if (!fechaNorm) return 'Todas las Fechas (Consolidado)';
+            return `Fecha: ${fechaNorm}`;
         }
 
         function actualizarReporte() {
-            const { fechaDesdeNorm, fechaHastaNorm, busqueda } = obtenerFiltros();
+            const { fechaNorm, busqueda } = obtenerFiltros();
 
-            // Filtrado de filas por rango de fecha (Desde - Hasta)
+            // Filtrado de filas por día único (por día solo)
             const filasFiltradas = TODOS_LOS_DESPACHOS.filter(item => {
-                if (fechaDesdeNorm || fechaHastaNorm) {
+                if (fechaNorm) {
                     const itemFechaNorm = normalizarFecha(item.fecha);
-                    if (fechaDesdeNorm && itemFechaNorm && itemFechaNorm < fechaDesdeNorm) return false;
-                    if (fechaHastaNorm && itemFechaNorm && itemFechaNorm > fechaHastaNorm) return false;
+                    if (itemFechaNorm && itemFechaNorm !== fechaNorm) return false;
                 }
                 if (busqueda) {
                     const txt = `${item.chofer || ''} ${item.unidad || ''} ${item.provincia || ''} ${item.observacion || ''} ${item.farmacia || ''} ${item.numeroPedido || ''} ${item.origen || ''}`.toLowerCase();
@@ -727,23 +679,23 @@
                 return true;
             });
 
-            const textoRango = formatearTextoRango(fechaDesdeNorm, fechaHastaNorm);
+            const textoFecha = formatearTextoFecha(fechaNorm);
 
             // Actualizar contadores y etiquetas informativas en ambas pestañas
             const contadorEl = document.getElementById('contador-filas-activas');
             if (contadorEl) contadorEl.textContent = `${filasFiltradas.length} unidades`;
 
             const labelReporteEl = document.getElementById('label-fecha-reporte');
-            if (labelReporteEl) labelReporteEl.textContent = `${textoRango} · Sedes Santo Domingo & Santiago`;
+            if (labelReporteEl) labelReporteEl.textContent = `${textoFecha} · Sedes Santo Domingo & Santiago`;
 
             const labelConsolidadoEl = document.getElementById('label-resumen-rango-consolidado');
-            if (labelConsolidadoEl) labelConsolidadoEl.textContent = `📅 ${textoRango}`;
+            if (labelConsolidadoEl) labelConsolidadoEl.textContent = `📅 ${textoFecha}`;
 
             const labelFarmaciaEl = document.getElementById('label-resumen-rango-farmacia');
-            if (labelFarmaciaEl) labelFarmaciaEl.textContent = `📅 ${textoRango}`;
+            if (labelFarmaciaEl) labelFarmaciaEl.textContent = `📅 ${textoFecha}`;
 
             const labelFechaFarmaciasEl = document.getElementById('label-fecha-farmacias');
-            if (labelFechaFarmaciasEl) labelFechaFarmaciasEl.textContent = `${textoRango} · Sedes Santo Domingo & Santiago`;
+            if (labelFechaFarmaciasEl) labelFechaFarmaciasEl.textContent = `${textoFecha} · Sedes Santo Domingo & Santiago`;
 
             const horaEl = document.getElementById('hora-generacion');
             if (horaEl) horaEl.textContent = `Generado: ${new Date().toLocaleTimeString('es-DO', { hour: '2-digit', minute: '2-digit' })}`;
@@ -1169,12 +1121,11 @@
         }
 
         function generarTextoWhatsApp() {
-            const { fechaDesdeNorm, fechaHastaNorm } = obtenerFiltros();
+            const { fechaNorm } = obtenerFiltros();
             const filas = TODOS_LOS_DESPACHOS.filter(item => {
-                if (fechaDesdeNorm || fechaHastaNorm) {
+                if (fechaNorm) {
                     const itemFechaNorm = normalizarFecha(item.fecha);
-                    if (fechaDesdeNorm && itemFechaNorm && itemFechaNorm < fechaDesdeNorm) return false;
-                    if (fechaHastaNorm && itemFechaNorm && itemFechaNorm > fechaHastaNorm) return false;
+                    if (itemFechaNorm && itemFechaNorm !== fechaNorm) return false;
                 }
                 return true;
             });
@@ -1196,7 +1147,7 @@
             // 1. Encabezado y Fecha
             if (incHeader) {
                 lineas.push('🚚 *REPORTE DIARIO DE DESPACHOS Y ENTREGAS · RD*');
-                lineas.push(`📅 *Fecha / Período:* ${formatearTextoRango(fechaDesdeNorm, fechaHastaNorm)}`);
+                lineas.push(`📅 *Fecha:* ${fechaNorm || 'Consolidado General'}`);
                 lineas.push('──────────────────────');
             }
 
@@ -1298,6 +1249,95 @@
                 setTimeout(() => { lbl.textContent = 'Copiar Texto'; }, 2000);
             } catch (e) {
                 alert("Texto copiado al portapapeles.");
+            }
+        }
+
+        // ========================================================
+        // COPIAR REPORTE CON FOTO AL PORTAPAPELES (Ctrl+V para WhatsApp)
+        // ========================================================
+        async function copiarReporteConFoto(textoOpcional) {
+            const isFarmacia = PESTANA_ACTIVA === 'farmacias';
+            const elemento = isFarmacia 
+                ? (document.getElementById('area-captura-farmacias') || document.getElementById('contenedor-farmacias-por-sede'))
+                : document.getElementById('area-captura');
+
+            if (!elemento) {
+                alert("No se encontró el cuadro para copiar.");
+                return;
+            }
+
+            const btn = document.getElementById('btn-copiar-foto');
+            let txtOriginal = '';
+            if (btn) {
+                txtOriginal = btn.innerHTML;
+                btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin text-blue-200"></i><span>Copiando...</span>`;
+                btn.disabled = true;
+            }
+
+            try {
+                const rect = elemento.getBoundingClientRect();
+                const width = Math.ceil(rect.width || elemento.scrollWidth || 1200);
+                const height = Math.ceil(rect.height || elemento.scrollHeight || 800);
+
+                const clone = elemento.cloneNode(true);
+                clone.querySelectorAll('.no-capture, .no-print').forEach(el => el.remove());
+                clone.style.width = width + 'px';
+                clone.style.backgroundColor = '#ffffff';
+
+                const serialized = new XMLSerializer().serializeToString(clone);
+                const svgString = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><foreignObject width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml" style="background:#ffffff;font-family:sans-serif;">${serialized}</div></foreignObject></svg>`;
+
+                const img = new Image();
+                const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+                const url = URL.createObjectURL(svgBlob);
+
+                const blob = await new Promise((resolve, reject) => {
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = width * 2;
+                        canvas.height = height * 2;
+                        const ctx = canvas.getContext('2d');
+                        if (!ctx) return reject(new Error("No canvas context"));
+                        ctx.scale(2, 2);
+                        ctx.fillStyle = '#ffffff';
+                        ctx.fillRect(0, 0, width, height);
+                        ctx.drawImage(img, 0, 0);
+                        URL.revokeObjectURL(url);
+                        canvas.toBlob(resolve, 'image/png');
+                    };
+                    img.onerror = (e) => {
+                        URL.revokeObjectURL(url);
+                        reject(e);
+                    };
+                    img.src = url;
+                });
+
+                if (!blob) throw new Error("No se pudo generar la imagen");
+
+                const textToCopy = textoOpcional || generarTextoWhatsApp();
+
+                if (navigator.clipboard && typeof navigator.clipboard.write === 'function' && typeof ClipboardItem !== 'undefined') {
+                    try {
+                        const items = { 'image/png': blob };
+                        if (textToCopy) items['text/plain'] = new Blob([textToCopy], { type: 'text/plain' });
+                        await navigator.clipboard.write([new ClipboardItem(items)]);
+                        alert("📋 ¡Reporte y foto copiados al portapapeles! Listo para pegar con Ctrl+V en WhatsApp.");
+                    } catch {
+                        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+                        alert("📋 ¡Foto del reporte copiada al portapapeles! Pégala directo con Ctrl+V en WhatsApp.");
+                    }
+                } else {
+                    alert("Foto generada. Puedes descargarla con el botón Capturar Imagen.");
+                }
+            } catch (err) {
+                console.error("Error al copiar reporte con foto:", err);
+                alert("No se pudo copiar la foto automáticamente. Usa el botón Capturar Imagen.");
+            } finally {
+                if (btn) {
+                    btn.innerHTML = txtOriginal;
+                    btn.disabled = false;
+                    lucide.createIcons();
+                }
             }
         }
 
@@ -1505,13 +1545,10 @@
 
         // Inicialización al cargar la página
         window.addEventListener('DOMContentLoaded', () => {
-            // Establecer rango de fechas por defecto (2026-10-25)
+            // Establecer fecha por defecto (2026-10-25)
             const hoy = "2026-10-25";
-            ['filtro-fecha-desde', 'filtro-consolidado-desde', 'filtro-farmacia-desde'].forEach(id => {
-                const el = document.getElementById(id);
-                if (el) el.value = hoy;
-            });
-            ['filtro-fecha-hasta', 'filtro-consolidado-hasta', 'filtro-farmacia-hasta'].forEach(id => {
+            FECHA_SELECCIONADA = hoy;
+            ['filtro-fecha-dia', 'filtro-consolidado-dia', 'filtro-farmacia-dia'].forEach(id => {
                 const el = document.getElementById(id);
                 if (el) el.value = hoy;
             });

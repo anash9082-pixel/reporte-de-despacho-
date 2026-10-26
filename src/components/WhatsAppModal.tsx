@@ -7,13 +7,15 @@ import {
   Copy, 
   Check, 
   Send, 
-  Sparkles,
-  Calendar,
-  Building2,
-  Truck,
-  TrendingUp,
-  FileText
+  Sparkles, 
+  Calendar, 
+  Building2, 
+  Truck, 
+  TrendingUp, 
+  FileText,
+  Camera
 } from 'lucide-react';
+import { copyReportImageToClipboard } from '../utils/captureHelper';
 
 interface WhatsAppModalProps {
   isOpen: boolean;
@@ -162,6 +164,9 @@ export const WhatsAppModal: React.FC<WhatsAppModalProps> = ({
     return lines.join('\n');
   }, [includeHeader, includeKpis, includeBases, includeDetails, includeFarmacias, includeFooter, deliveries, selectedDate, kpis]);
 
+  const [isCopyingPhoto, setIsCopyingPhoto] = useState(false);
+  const [photoCopied, setPhotoCopied] = useState(false);
+
   if (!isOpen) return null;
 
   const handleCopy = async () => {
@@ -171,6 +176,20 @@ export const WhatsAppModal: React.FC<WhatsAppModalProps> = ({
       setTimeout(() => setCopied(false), 2500);
     } catch {
       // fallback
+    }
+  };
+
+  const handleCopyTextAndPhoto = async () => {
+    setIsCopyingPhoto(true);
+    try {
+      const res = await copyReportImageToClipboard('area-captura', messageText);
+      setPhotoCopied(true);
+      setTimeout(() => setPhotoCopied(false), 3000);
+      alert(res.message);
+    } catch {
+      alert('Texto copiado al portapapeles.');
+    } finally {
+      setIsCopyingPhoto(false);
     }
   };
 
@@ -338,18 +357,28 @@ export const WhatsAppModal: React.FC<WhatsAppModalProps> = ({
             Cancelar
           </button>
 
-          <div className="flex items-center gap-2.5 w-full sm:w-auto">
+          <div className="flex items-center gap-2.5 w-full sm:w-auto flex-wrap justify-end">
+            <button
+              onClick={handleCopyTextAndPhoto}
+              disabled={isCopyingPhoto}
+              className="flex-1 sm:flex-initial px-3.5 py-2 bg-blue-700 hover:bg-blue-800 text-white text-xs font-bold rounded-lg transition shadow-2xs inline-flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+              title="Copiar imagen del cuadro y el texto para pegar directo en WhatsApp (Ctrl+V)"
+            >
+              <Copy className="w-4 h-4 text-blue-200" />
+              <span>{photoCopied ? '¡Texto + Foto Copiados!' : 'Copiar Texto + Foto'}</span>
+            </button>
+
             <button
               onClick={handleCopy}
-              className="flex-1 sm:flex-initial px-4 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 text-xs font-bold rounded-lg transition shadow-2xs inline-flex items-center justify-center gap-1.5 cursor-pointer"
+              className="flex-1 sm:flex-initial px-3.5 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 text-xs font-bold rounded-lg transition shadow-2xs inline-flex items-center justify-center gap-1.5 cursor-pointer"
             >
               {copied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
-              <span>{copied ? '¡Copiado al portapapeles!' : 'Copiar Texto'}</span>
+              <span>{copied ? '¡Texto Copiado!' : 'Copiar Solo Texto'}</span>
             </button>
 
             <button
               onClick={handleSendWhatsApp}
-              className="flex-1 sm:flex-initial px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-sm transition inline-flex items-center justify-center gap-2 cursor-pointer"
+              className="flex-1 sm:flex-initial px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-sm transition inline-flex items-center justify-center gap-2 cursor-pointer"
             >
               <Send className="w-4 h-4" />
               <span>Enviar a WhatsApp</span>
