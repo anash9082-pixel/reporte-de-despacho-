@@ -58,7 +58,13 @@ const VISIBLE_COLUMNS_KEY = 'rd_despachos_visible_columns_v4';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'consolidado' | 'farmacias'>('consolidado');
-  const [selectedDate, setSelectedDate] = useState<string>('2026-10-25');
+  const [startDate, setStartDate] = useState<string>('2026-10-25');
+  const [endDate, setEndDate] = useState<string>('2026-10-25');
+
+  const handleSetDateRange = (start: string, end: string) => {
+    setStartDate(start);
+    setEndDate(end);
+  };
 
   // Load deliveries from localStorage or fallback to initial mock data
   const [deliveries, setDeliveries] = useState<DeliveryItem[]>(() => {
@@ -260,16 +266,18 @@ export default function App() {
     handleDirectSheetSync(false);
   }, []);
 
-  // Filter deliveries by selected date, unified Hub (SD / STI), service type, status, and search query
+  // Filter deliveries by date range (Desde - Hasta), unified Hub (SD / STI), service type, status, and search query
   const filteredDeliveries = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
-    const normSelectedDate = normalizeDateString(selectedDate);
 
     return deliveries.filter((item) => {
-      // Date filter
-      if (selectedDate && selectedDate !== 'all') {
+      // Date range filter (Desde - Hasta)
+      if (startDate || endDate) {
         const itemNormDate = normalizeDateString(item.fecha);
-        if (normSelectedDate && itemNormDate && itemNormDate !== normSelectedDate) {
+        if (startDate && itemNormDate && itemNormDate < startDate) {
+          return false;
+        }
+        if (endDate && itemNormDate && itemNormDate > endDate) {
           return false;
         }
       }
@@ -309,7 +317,7 @@ export default function App() {
       }
       return true;
     });
-  }, [deliveries, selectedDate, selectedHub, selectedService, statusFilter, searchQuery]);
+  }, [deliveries, startDate, endDate, selectedHub, selectedService, statusFilter, searchQuery]);
 
   // Overall KPIs
   const kpis: KPIData = useMemo(() => {
@@ -404,7 +412,8 @@ export default function App() {
     setSelectedHub('all');
     setSelectedService('all');
     setStatusFilter('all');
-    setSelectedDate('2026-10-25');
+    setStartDate('2026-10-25');
+    setEndDate('2026-10-25');
     setSearchQuery('');
     showToast('Filtros restablecidos al consolidado nacional.');
   };
@@ -424,7 +433,10 @@ export default function App() {
     setIsCapturing(true);
     showToast('Generando captura en imagen PNG de alta resolución...');
     try {
-      const success = await captureReportToPng('area-captura', selectedDate || 'Consolidado');
+      const dateTag = startDate && endDate
+        ? (startDate === endDate ? startDate : `${startDate}_al_${endDate}`)
+        : 'Consolidado';
+      const success = await captureReportToPng('area-captura', dateTag);
       if (success) {
         showToast('📷 ¡Reporte capturado exitosamente en PNG! Listo para enviar por WhatsApp o correo.');
       } else {
@@ -642,8 +654,11 @@ export default function App() {
                 onSelectStatus={setStatusFilter}
                 searchQuery={searchQuery}
                 onSearchChange={setSearchQuery}
-                selectedDate={selectedDate}
-                onDateChange={setSelectedDate}
+                startDate={startDate}
+                endDate={endDate}
+                onStartDateChange={setStartDate}
+                onEndDateChange={setEndDate}
+                onSetDateRange={handleSetDateRange}
                 onCapturePng={handleCapturePng}
                 isCapturing={isCapturing}
                 onOpenNewModal={() => {
@@ -668,7 +683,8 @@ export default function App() {
             <section aria-label="Tabla Maestra Unificada por Sedes">
               <MasterExecutiveTable
                 deliveries={filteredDeliveries}
-                selectedDate={selectedDate}
+                startDate={startDate}
+                endDate={endDate}
                 visibleColumns={visibleColumns}
                 onToggleStatus={handleToggleStatus}
                 onEditItem={handleEditDelivery}
@@ -683,7 +699,11 @@ export default function App() {
           <section aria-label="Detalle de Farmacias y Pedidos por Sede">
             <FarmaciasTab
               deliveries={filteredDeliveries}
-              selectedDate={selectedDate}
+              startDate={startDate}
+              endDate={endDate}
+              onStartDateChange={setStartDate}
+              onEndDateChange={setEndDate}
+              onSetDateRange={handleSetDateRange}
             />
           </section>
         )}
@@ -750,7 +770,7 @@ export default function App() {
         onSave={handleSaveDelivery}
         initialItem={editingItem}
         defaultBlockId={defaultBlockForNew}
-        defaultDate={selectedDate || new Date().toISOString().slice(0, 10)}
+        defaultDate={startDate || new Date().toISOString().slice(0, 10)}
       />
 
       {/* Google Sheets / CSV Modal */}
@@ -777,7 +797,8 @@ export default function App() {
         isOpen={isWhatsAppModalOpen}
         onClose={() => setIsWhatsAppModalOpen(false)}
         deliveries={filteredDeliveries}
-        selectedDate={selectedDate}
+        startDate={startDate}
+        endDate={endDate}
         kpis={kpis}
       />
     </div>

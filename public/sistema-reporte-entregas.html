@@ -41,13 +41,20 @@
                 </div>
             </div>
 
-            <!-- Controles: Selector de Fecha, Sincronización, Captura y WhatsApp -->
+            <!-- Controles: Selector de Fecha (Desde - Hasta), Sincronización, Captura y WhatsApp -->
             <div class="flex flex-wrap items-center gap-2.5 w-full lg:w-auto justify-end">
-                <!-- Selector de Fecha Flexible (soporta YYYY-MM-DD y DD-MM-YYYY) -->
-                <div class="flex items-center gap-1.5 bg-slate-900 border border-slate-700 px-3 py-1.5 rounded-lg text-xs shadow-xs">
-                    <i data-lucide="calendar" class="w-4 h-4 text-blue-400"></i>
-                    <input type="date" id="filtro-fecha" onchange="actualizarReporte()" class="bg-transparent font-medium text-white focus:outline-none cursor-pointer">
-                    <button onclick="setHoy()" class="text-blue-400 hover:text-blue-300 font-bold ml-1.5 cursor-pointer">Hoy</button>
+                <!-- Selector de Rango de Fechas Flexible (Desde - Hasta) -->
+                <div class="flex items-center gap-1.5 bg-slate-900 border border-slate-700 px-3 py-1.5 rounded-lg text-xs shadow-xs flex-wrap">
+                    <span class="flex items-center gap-1 text-slate-300 font-bold">
+                        <i data-lucide="calendar" class="w-3.5 h-3.5 text-blue-400"></i>
+                        <span>Desde:</span>
+                    </span>
+                    <input type="date" id="filtro-fecha-desde" onchange="sincronizarFechas('header')" class="bg-slate-800 text-white font-mono px-2 py-0.5 rounded border border-slate-600 text-xs focus:outline-none cursor-pointer" title="Fecha inicial">
+                    <span class="text-slate-300 font-bold ml-1">Hasta:</span>
+                    <input type="date" id="filtro-fecha-hasta" onchange="sincronizarFechas('header')" class="bg-slate-800 text-white font-mono px-2 py-0.5 rounded border border-slate-600 text-xs focus:outline-none cursor-pointer" title="Fecha final">
+                    <button onclick="setRangoHoy()" class="text-blue-400 hover:text-blue-300 font-bold ml-1 cursor-pointer">Hoy</button>
+                    <span class="text-slate-600">|</span>
+                    <button onclick="setRango7Dias()" class="text-blue-300 hover:text-white font-medium cursor-pointer">7D</button>
                     <span class="text-slate-600">|</span>
                     <button onclick="verTodasLasFechas()" class="text-slate-400 hover:text-white cursor-pointer">Todas</button>
                 </div>
@@ -122,6 +129,35 @@
                 </div>
             </div>
 
+            <!-- Barra de Filtro de Fechas (Desde - Hasta) para Pestaña 1 -->
+            <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-xs flex flex-wrap items-center justify-between gap-3 no-print">
+                <div class="flex items-center gap-2 flex-wrap">
+                    <div class="flex items-center gap-1.5 bg-slate-100 border border-slate-300 rounded-lg p-1.5 text-xs">
+                        <span class="px-2 font-bold text-slate-800 flex items-center gap-1">
+                            <i data-lucide="calendar" class="w-3.5 h-3.5 text-blue-600"></i>
+                            Filtrar por Fecha:
+                        </span>
+                        <div class="flex items-center gap-1 bg-white px-2 py-0.5 rounded border border-slate-300">
+                            <label class="text-[10px] uppercase font-bold text-slate-500">Desde:</label>
+                            <input type="date" id="filtro-consolidado-desde" onchange="sincronizarFechas('consolidado')" class="bg-transparent font-mono text-xs text-slate-900 focus:outline-none cursor-pointer">
+                        </div>
+                        <div class="flex items-center gap-1 bg-white px-2 py-0.5 rounded border border-slate-300">
+                            <label class="text-[10px] uppercase font-bold text-slate-500">Hasta:</label>
+                            <input type="date" id="filtro-consolidado-hasta" onchange="sincronizarFechas('consolidado')" class="bg-transparent font-mono text-xs text-slate-900 focus:outline-none cursor-pointer">
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <button onclick="setRangoHoy()" class="px-2.5 py-1 text-xs font-bold rounded-lg border bg-white border-slate-300 hover:bg-slate-100 text-slate-700 cursor-pointer">Hoy</button>
+                        <button onclick="setRangoAyer()" class="px-2.5 py-1 text-xs font-semibold rounded-lg border bg-white border-slate-300 hover:bg-slate-100 text-slate-700 cursor-pointer">Ayer</button>
+                        <button onclick="setRango7Dias()" class="px-2.5 py-1 text-xs font-semibold rounded-lg border bg-white border-slate-300 hover:bg-slate-100 text-slate-700 cursor-pointer">Últimos 7 días</button>
+                        <button onclick="verTodasLasFechas()" class="px-2.5 py-1 text-xs font-semibold rounded-lg border bg-white border-slate-300 hover:bg-slate-100 text-slate-700 cursor-pointer">Ver Todo</button>
+                    </div>
+                </div>
+                <div class="text-xs font-mono text-slate-600" id="label-resumen-rango-consolidado">
+                    📅 Período activo
+                </div>
+            </div>
+
             <!-- ÁREA CAPTURABLE PARA GERENCIA (CONSOLIDADO 4 BASES) -->
             <div id="area-captura" class="bg-white rounded-xl shadow-xs border border-slate-200 overflow-hidden">
                 
@@ -175,6 +211,35 @@
         <!-- PESTAÑA 2: DETALLE DE FARMACIAS Y PEDIDOS                 -->
         <!-- ======================================================== -->
         <div id="vista-farmacias" class="space-y-4 hidden">
+            <!-- Barra de Filtro de Fechas (Desde - Hasta) para Pestaña 2 Farmacias -->
+            <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-xs flex flex-wrap items-center justify-between gap-3 no-print">
+                <div class="flex items-center gap-2 flex-wrap">
+                    <div class="flex items-center gap-1.5 bg-slate-100 border border-slate-300 rounded-lg p-1.5 text-xs">
+                        <span class="px-2 font-bold text-slate-800 flex items-center gap-1">
+                            <i data-lucide="calendar" class="w-3.5 h-3.5 text-emerald-600"></i>
+                            Filtrar por Fecha:
+                        </span>
+                        <div class="flex items-center gap-1 bg-white px-2 py-0.5 rounded border border-slate-300">
+                            <label class="text-[10px] uppercase font-bold text-slate-500">Desde:</label>
+                            <input type="date" id="filtro-farmacia-desde" onchange="sincronizarFechas('farmacia')" class="bg-transparent font-mono text-xs text-slate-900 focus:outline-none cursor-pointer">
+                        </div>
+                        <div class="flex items-center gap-1 bg-white px-2 py-0.5 rounded border border-slate-300">
+                            <label class="text-[10px] uppercase font-bold text-slate-500">Hasta:</label>
+                            <input type="date" id="filtro-farmacia-hasta" onchange="sincronizarFechas('farmacia')" class="bg-transparent font-mono text-xs text-slate-900 focus:outline-none cursor-pointer">
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <button onclick="setRangoHoy()" class="px-2.5 py-1 text-xs font-bold rounded-lg border bg-white border-slate-300 hover:bg-slate-100 text-slate-700 cursor-pointer">Hoy</button>
+                        <button onclick="setRangoAyer()" class="px-2.5 py-1 text-xs font-semibold rounded-lg border bg-white border-slate-300 hover:bg-slate-100 text-slate-700 cursor-pointer">Ayer</button>
+                        <button onclick="setRango7Dias()" class="px-2.5 py-1 text-xs font-semibold rounded-lg border bg-white border-slate-300 hover:bg-slate-100 text-slate-700 cursor-pointer">Últimos 7 días</button>
+                        <button onclick="verTodasLasFechas()" class="px-2.5 py-1 text-xs font-semibold rounded-lg border bg-white border-slate-300 hover:bg-slate-100 text-slate-700 cursor-pointer">Ver Todo</button>
+                    </div>
+                </div>
+                <div class="text-xs font-mono text-slate-600" id="label-resumen-rango-farmacia">
+                    📅 Período activo
+                </div>
+            </div>
+
             <!-- KPIs Superiores de Farmacias -->
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
@@ -527,32 +592,114 @@
             actualizarReporte();
         }
 
-        function setHoy() {
-            const hoy = new Date().toISOString().slice(0, 10);
-            document.getElementById('filtro-fecha').value = hoy;
+        function sincronizarFechas(origen) {
+            let desde = '';
+            let hasta = '';
+
+            if (origen === 'header') {
+                desde = document.getElementById('filtro-fecha-desde')?.value || '';
+                hasta = document.getElementById('filtro-fecha-hasta')?.value || '';
+            } else if (origen === 'consolidado') {
+                desde = document.getElementById('filtro-consolidado-desde')?.value || '';
+                hasta = document.getElementById('filtro-consolidado-hasta')?.value || '';
+            } else if (origen === 'farmacia') {
+                desde = document.getElementById('filtro-farmacia-desde')?.value || '';
+                hasta = document.getElementById('filtro-farmacia-hasta')?.value || '';
+            }
+
+            // Reflejar de inmediato en los 3 grupos de inputs (header, pestaña 1, pestaña 2)
+            ['filtro-fecha-desde', 'filtro-consolidado-desde', 'filtro-farmacia-desde'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el && el.value !== desde) el.value = desde;
+            });
+            ['filtro-fecha-hasta', 'filtro-consolidado-hasta', 'filtro-farmacia-hasta'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el && el.value !== hasta) el.value = hasta;
+            });
+
+            actualizarReporte();
+        }
+
+        function setRangoHoy() {
+            const hoy = "2026-10-25";
+            ['filtro-fecha-desde', 'filtro-consolidado-desde', 'filtro-farmacia-desde'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = hoy;
+            });
+            ['filtro-fecha-hasta', 'filtro-consolidado-hasta', 'filtro-farmacia-hasta'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = hoy;
+            });
+            actualizarReporte();
+        }
+
+        function setRangoAyer() {
+            const ayer = "2026-10-24";
+            ['filtro-fecha-desde', 'filtro-consolidado-desde', 'filtro-farmacia-desde'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = ayer;
+            });
+            ['filtro-fecha-hasta', 'filtro-consolidado-hasta', 'filtro-farmacia-hasta'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = ayer;
+            });
+            actualizarReporte();
+        }
+
+        function setRango7Dias() {
+            const desde = "2026-10-19";
+            const hasta = "2026-10-25";
+            ['filtro-fecha-desde', 'filtro-consolidado-desde', 'filtro-farmacia-desde'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = desde;
+            });
+            ['filtro-fecha-hasta', 'filtro-consolidado-hasta', 'filtro-farmacia-hasta'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = hasta;
+            });
             actualizarReporte();
         }
 
         function verTodasLasFechas() {
-            document.getElementById('filtro-fecha').value = '';
+            ['filtro-fecha-desde', 'filtro-consolidado-desde', 'filtro-farmacia-desde'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = '';
+            });
+            ['filtro-fecha-hasta', 'filtro-consolidado-hasta', 'filtro-farmacia-hasta'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = '';
+            });
             actualizarReporte();
         }
 
         function obtenerFiltros() {
-            const fechaInput = document.getElementById('filtro-fecha').value;
-            const fechaNormalizada = fechaInput ? normalizarFecha(fechaInput) : '';
-            const busqueda = (document.getElementById('busqueda-input').value || '').trim().toLowerCase();
-            return { fechaNormalizada, busqueda };
+            const desdeInput = document.getElementById('filtro-fecha-desde')?.value || '';
+            const hastaInput = document.getElementById('filtro-fecha-hasta')?.value || '';
+            const fechaDesdeNorm = desdeInput ? normalizarFecha(desdeInput) : '';
+            const fechaHastaNorm = hastaInput ? normalizarFecha(hastaInput) : '';
+            const busqueda = (document.getElementById('busqueda-input')?.value || '').trim().toLowerCase();
+            return { fechaDesdeNorm, fechaHastaNorm, busqueda };
+        }
+
+        function formatearTextoRango(desde, hasta) {
+            if (desde && hasta) {
+                if (desde === hasta) return `Fecha: ${desde}`;
+                return `Período: ${desde} al ${hasta}`;
+            }
+            if (desde) return `Desde: ${desde}`;
+            if (hasta) return `Hasta: ${hasta}`;
+            return 'Todas las Fechas (Consolidado General)';
         }
 
         function actualizarReporte() {
-            const { fechaNormalizada, busqueda } = obtenerFiltros();
+            const { fechaDesdeNorm, fechaHastaNorm, busqueda } = obtenerFiltros();
 
-            // Filtrado de filas
+            // Filtrado de filas por rango de fecha (Desde - Hasta)
             const filasFiltradas = TODOS_LOS_DESPACHOS.filter(item => {
-                if (fechaNormalizada) {
+                if (fechaDesdeNorm || fechaHastaNorm) {
                     const itemFechaNorm = normalizarFecha(item.fecha);
-                    if (itemFechaNorm && itemFechaNorm !== fechaNormalizada) return false;
+                    if (fechaDesdeNorm && itemFechaNorm && itemFechaNorm < fechaDesdeNorm) return false;
+                    if (fechaHastaNorm && itemFechaNorm && itemFechaNorm > fechaHastaNorm) return false;
                 }
                 if (busqueda) {
                     const txt = `${item.chofer || ''} ${item.unidad || ''} ${item.provincia || ''} ${item.observacion || ''} ${item.farmacia || ''} ${item.numeroPedido || ''} ${item.origen || ''}`.toLowerCase();
@@ -561,10 +708,23 @@
                 return true;
             });
 
-            // Actualizar contadores
-            document.getElementById('contador-filas-activas').textContent = `${filasFiltradas.length} unidades`;
-            document.getElementById('label-fecha-reporte').textContent = `Fecha: ${fechaNormalizada || 'Consolidado General'} · Sedes Santo Domingo & Santiago`;
-            document.getElementById('hora-generacion').textContent = `Generado: ${new Date().toLocaleTimeString('es-DO', { hour: '2-digit', minute: '2-digit' })}`;
+            const textoRango = formatearTextoRango(fechaDesdeNorm, fechaHastaNorm);
+
+            // Actualizar contadores y etiquetas informativas en ambas pestañas
+            const contadorEl = document.getElementById('contador-filas-activas');
+            if (contadorEl) contadorEl.textContent = `${filasFiltradas.length} unidades`;
+
+            const labelReporteEl = document.getElementById('label-fecha-reporte');
+            if (labelReporteEl) labelReporteEl.textContent = `${textoRango} · Sedes Santo Domingo & Santiago`;
+
+            const labelConsolidadoEl = document.getElementById('label-resumen-rango-consolidado');
+            if (labelConsolidadoEl) labelConsolidadoEl.textContent = `📅 ${textoRango}`;
+
+            const labelFarmaciaEl = document.getElementById('label-resumen-rango-farmacia');
+            if (labelFarmaciaEl) labelFarmaciaEl.textContent = `📅 ${textoRango}`;
+
+            const horaEl = document.getElementById('hora-generacion');
+            if (horaEl) horaEl.textContent = `Generado: ${new Date().toLocaleTimeString('es-DO', { hour: '2-digit', minute: '2-digit' })}`;
 
             if (PESTANA_ACTIVA === 'consolidado') {
                 renderizarTablaConsolidada(filasFiltradas);
@@ -893,7 +1053,10 @@
                 });
 
                 const link = document.createElement('a');
-                const fechaStr = document.getElementById('filtro-fecha').value || 'consolidado';
+                const { fechaDesdeNorm, fechaHastaNorm } = obtenerFiltros();
+                const fechaStr = fechaDesdeNorm && fechaHastaNorm 
+                    ? (fechaDesdeNorm === fechaHastaNorm ? fechaDesdeNorm : `${fechaDesdeNorm}_al_${fechaHastaNorm}`)
+                    : (fechaDesdeNorm || fechaHastaNorm || 'consolidado');
                 link.download = `Reporte_Gerencial_Despachos_RD_${fechaStr}.png`;
                 link.href = canvas.toDataURL('image/png');
                 link.click();
@@ -920,11 +1083,12 @@
         }
 
         function generarTextoWhatsApp() {
-            const { fechaNormalizada, busqueda } = obtenerFiltros();
+            const { fechaDesdeNorm, fechaHastaNorm } = obtenerFiltros();
             const filas = TODOS_LOS_DESPACHOS.filter(item => {
-                if (fechaNormalizada) {
+                if (fechaDesdeNorm || fechaHastaNorm) {
                     const itemFechaNorm = normalizarFecha(item.fecha);
-                    if (itemFechaNorm && itemFechaNorm !== fechaNormalizada) return false;
+                    if (fechaDesdeNorm && itemFechaNorm && itemFechaNorm < fechaDesdeNorm) return false;
+                    if (fechaHastaNorm && itemFechaNorm && itemFechaNorm > fechaHastaNorm) return false;
                 }
                 return true;
             });
@@ -946,7 +1110,7 @@
             // 1. Encabezado y Fecha
             if (incHeader) {
                 lineas.push('🚚 *REPORTE DIARIO DE DESPACHOS Y ENTREGAS · RD*');
-                lineas.push(`📅 *Fecha:* ${fechaNormalizada || 'Consolidado General'}`);
+                lineas.push(`📅 *Fecha / Período:* ${formatearTextoRango(fechaDesdeNorm, fechaHastaNorm)}`);
                 lineas.push('──────────────────────');
             }
 
@@ -1255,8 +1419,16 @@
 
         // Inicialización al cargar la página
         window.addEventListener('DOMContentLoaded', () => {
-            // Establecer fecha por defecto (2026-10-25)
-            document.getElementById('filtro-fecha').value = "2026-10-25";
+            // Establecer rango de fechas por defecto (2026-10-25)
+            const hoy = "2026-10-25";
+            ['filtro-fecha-desde', 'filtro-consolidado-desde', 'filtro-farmacia-desde'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = hoy;
+            });
+            ['filtro-fecha-hasta', 'filtro-consolidado-hasta', 'filtro-farmacia-hasta'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = hoy;
+            });
             actualizarReporte();
             lucide.createIcons();
             // Intento automático de conexión con Google Sheets sin alerta intrusiva

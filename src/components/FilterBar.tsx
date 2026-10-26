@@ -28,8 +28,11 @@ interface FilterBarProps {
   onSelectStatus: (status: 'all' | DeliveryStatus) => void;
   searchQuery: string;
   onSearchChange: (query: string) => void;
-  selectedDate: string;
-  onDateChange: (date: string) => void;
+  startDate: string;
+  endDate: string;
+  onStartDateChange: (date: string) => void;
+  onEndDateChange: (date: string) => void;
+  onSetDateRange: (start: string, end: string) => void;
   onCapturePng: () => void;
   isCapturing: boolean;
   onOpenNewModal: () => void;
@@ -54,8 +57,11 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   onSelectStatus,
   searchQuery,
   onSearchChange,
-  selectedDate,
-  onDateChange,
+  startDate,
+  endDate,
+  onStartDateChange,
+  onEndDateChange,
+  onSetDateRange,
   onCapturePng,
   isCapturing,
   onOpenNewModal,
@@ -82,74 +88,118 @@ export const FilterBar: React.FC<FilterBarProps> = ({
     { id: 'blanco', label: 'Transporte Blanco' }
   ];
 
-  const handleShiftDate = (days: number) => {
-    const baseDate = selectedDate ? new Date(selectedDate + 'T12:00:00') : new Date('2026-10-25T12:00:00');
-    baseDate.setDate(baseDate.getDate() + days);
-    onDateChange(baseDate.toISOString().slice(0, 10));
+  const handleSetToday = () => {
+    onSetDateRange('2026-10-25', '2026-10-25');
   };
 
-  const handleSetToday = () => {
-    onDateChange('2026-10-25');
+  const handleSetYesterday = () => {
+    onSetDateRange('2026-10-24', '2026-10-24');
+  };
+
+  const handleSetLast7Days = () => {
+    onSetDateRange('2026-10-19', '2026-10-25');
   };
 
   const handleSetAllDates = () => {
-    onDateChange('');
+    onSetDateRange('', '');
   };
+
+  const isTodayActive = startDate === '2026-10-25' && endDate === '2026-10-25';
+  const isAllDatesActive = !startDate && !endDate;
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs space-y-3.5">
-      {/* 1. Fila Superior: Selector de Fecha + Botonera de Acciones Ejecutivas */}
+      {/* 1. Fila Superior: Filtro de Rango de Fechas (Desde - Hasta) + Botonera Ejecutiva */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
-        {/* Selector de Fecha */}
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <div className="flex items-center gap-1 bg-slate-100 border border-slate-300 rounded-lg p-1 text-xs">
-            <span className="px-2 font-bold text-slate-700 flex items-center gap-1">
+        {/* Selector de Rango de Fechas (Desde - Hasta) */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-1.5 bg-slate-100/90 border border-slate-300 rounded-xl p-1.5 text-xs shadow-2xs">
+            <span className="px-2 font-bold text-slate-800 flex items-center gap-1">
               <Calendar className="w-3.5 h-3.5 text-blue-600" />
-              Fecha:
+              Rango de Fecha:
             </span>
-            <button
-              onClick={() => handleShiftDate(-1)}
-              className="p-1 hover:bg-slate-200 rounded text-slate-600 cursor-pointer"
-              title="Día anterior"
-            >
-              <ChevronLeft className="w-3.5 h-3.5" />
-            </button>
-            <input
-              type="date"
-              value={selectedDate}
-              onChange={(e) => onDateChange(e.target.value)}
-              className="bg-white px-2 py-0.5 rounded border border-slate-300 text-xs font-mono font-semibold text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-600 cursor-pointer"
-            />
-            <button
-              onClick={() => handleShiftDate(1)}
-              className="p-1 hover:bg-slate-200 rounded text-slate-600 cursor-pointer"
-              title="Día siguiente"
-            >
-              <ChevronRight className="w-3.5 h-3.5" />
-            </button>
+
+            {/* Fecha Desde */}
+            <div className="flex items-center gap-1 bg-white px-2 py-1 rounded-lg border border-slate-300">
+              <label htmlFor="filter-start-date" className="text-[10px] uppercase font-bold text-slate-500">
+                Desde:
+              </label>
+              <input
+                id="filter-start-date"
+                type="date"
+                value={startDate}
+                onChange={(e) => onStartDateChange(e.target.value)}
+                className="bg-transparent text-xs font-mono font-semibold text-slate-900 focus:outline-none cursor-pointer"
+                title="Fecha inicio del reporte"
+              />
+            </div>
+
+            {/* Fecha Hasta */}
+            <div className="flex items-center gap-1 bg-white px-2 py-1 rounded-lg border border-slate-300">
+              <label htmlFor="filter-end-date" className="text-[10px] uppercase font-bold text-slate-500">
+                Hasta:
+              </label>
+              <input
+                id="filter-end-date"
+                type="date"
+                value={endDate}
+                onChange={(e) => onEndDateChange(e.target.value)}
+                className="bg-transparent text-xs font-mono font-semibold text-slate-900 focus:outline-none cursor-pointer"
+                title="Fecha final del reporte"
+              />
+            </div>
           </div>
 
-          <button
-            onClick={handleSetToday}
-            className={`px-2.5 py-1 text-xs font-bold rounded-lg border transition cursor-pointer ${
-              selectedDate === '2026-10-25'
-                ? 'bg-blue-600 text-white border-blue-600'
-                : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-            }`}
-          >
-            Hoy (25 Oct)
-          </button>
+          {/* Botones de Acceso Rápido a Fechas */}
+          <div className="flex items-center gap-1">
+            <button
+              onClick={handleSetToday}
+              className={`px-2.5 py-1.5 text-xs font-bold rounded-lg border transition cursor-pointer ${
+                isTodayActive
+                  ? 'bg-blue-600 text-white border-blue-600 shadow-2xs'
+                  : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
+              }`}
+              title="Filtrar despachos del día de hoy (25 Octubre)"
+            >
+              Hoy
+            </button>
 
-          <button
-            onClick={handleSetAllDates}
-            className={`px-2.5 py-1 text-xs font-semibold rounded-lg border transition cursor-pointer ${
-              !selectedDate
-                ? 'bg-slate-900 text-white border-slate-900'
-                : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-            }`}
-          >
-            Ver Todas
-          </button>
+            <button
+              onClick={handleSetYesterday}
+              className={`px-2.5 py-1.5 text-xs font-semibold rounded-lg border transition cursor-pointer ${
+                startDate === '2026-10-24' && endDate === '2026-10-24'
+                  ? 'bg-blue-600 text-white border-blue-600 shadow-2xs'
+                  : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
+              }`}
+              title="Filtrar despachos del día de ayer"
+            >
+              Ayer
+            </button>
+
+            <button
+              onClick={handleSetLast7Days}
+              className={`px-2.5 py-1.5 text-xs font-semibold rounded-lg border transition cursor-pointer ${
+                startDate === '2026-10-19' && endDate === '2026-10-25'
+                  ? 'bg-blue-600 text-white border-blue-600 shadow-2xs'
+                  : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
+              }`}
+              title="Filtrar despachos de los últimos 7 días"
+            >
+              Últimos 7 días
+            </button>
+
+            <button
+              onClick={handleSetAllDates}
+              className={`px-2.5 py-1.5 text-xs font-semibold rounded-lg border transition cursor-pointer ${
+                isAllDatesActive
+                  ? 'bg-slate-900 text-white border-slate-900 shadow-2xs'
+                  : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
+              }`}
+              title="Ver registros de todas las fechas sin restricción"
+            >
+              Ver Todo
+            </button>
+          </div>
         </div>
 
         {/* Acciones Rápidas Ejecutivas */}

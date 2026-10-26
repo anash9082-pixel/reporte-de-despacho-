@@ -13,17 +13,26 @@ import {
   SlidersHorizontal,
   ExternalLink,
   Store,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Calendar
 } from 'lucide-react';
 
 interface FarmaciasTabProps {
   deliveries: DeliveryItem[];
-  selectedDate: string;
+  startDate: string;
+  endDate: string;
+  onStartDateChange: (date: string) => void;
+  onEndDateChange: (date: string) => void;
+  onSetDateRange: (start: string, end: string) => void;
 }
 
 export const FarmaciasTab: React.FC<FarmaciasTabProps> = ({
   deliveries,
-  selectedDate
+  startDate,
+  endDate,
+  onStartDateChange,
+  onEndDateChange,
+  onSetDateRange
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedHubFilter, setSelectedHubFilter] = useState<'all' | 'santodomingo' | 'santiago'>('all');
@@ -329,6 +338,102 @@ export const FarmaciasTab: React.FC<FarmaciasTabProps> = ({
             <span className="text-2xl font-black font-mono text-emerald-700">{stats.efectividad}%</span>
             <span className="text-xs font-semibold text-slate-500">{stats.entregados} de {stats.totalDespachos}</span>
           </div>
+        </div>
+      </div>
+
+      {/* Barra de Filtro de Fechas (Desde - Hasta) en Pestaña 2 */}
+      <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-1.5 bg-slate-100/90 border border-slate-300 rounded-xl p-1.5 text-xs shadow-2xs">
+            <span className="px-2 font-bold text-slate-800 flex items-center gap-1">
+              <Calendar className="w-3.5 h-3.5 text-emerald-600" />
+              Filtrar por Fecha:
+            </span>
+
+            {/* Fecha Desde */}
+            <div className="flex items-center gap-1 bg-white px-2 py-1 rounded-lg border border-slate-300">
+              <label htmlFor="farmacia-start-date" className="text-[10px] uppercase font-bold text-slate-500">
+                Desde:
+              </label>
+              <input
+                id="farmacia-start-date"
+                type="date"
+                value={startDate}
+                onChange={(e) => onStartDateChange(e.target.value)}
+                className="bg-transparent text-xs font-mono font-semibold text-slate-900 focus:outline-none cursor-pointer"
+                title="Fecha inicio de despachos"
+              />
+            </div>
+
+            {/* Fecha Hasta */}
+            <div className="flex items-center gap-1 bg-white px-2 py-1 rounded-lg border border-slate-300">
+              <label htmlFor="farmacia-end-date" className="text-[10px] uppercase font-bold text-slate-500">
+                Hasta:
+              </label>
+              <input
+                id="farmacia-end-date"
+                type="date"
+                value={endDate}
+                onChange={(e) => onEndDateChange(e.target.value)}
+                className="bg-transparent text-xs font-mono font-semibold text-slate-900 focus:outline-none cursor-pointer"
+                title="Fecha final de despachos"
+              />
+            </div>
+          </div>
+
+          {/* Botones de selección rápida */}
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => onSetDateRange('2026-10-25', '2026-10-25')}
+              className={`px-2.5 py-1.5 text-xs font-bold rounded-lg border transition cursor-pointer ${
+                startDate === '2026-10-25' && endDate === '2026-10-25'
+                  ? 'bg-emerald-600 text-white border-emerald-600 shadow-2xs'
+                  : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
+              }`}
+            >
+              Hoy (25 Oct)
+            </button>
+            <button
+              onClick={() => onSetDateRange('2026-10-24', '2026-10-24')}
+              className={`px-2.5 py-1.5 text-xs font-semibold rounded-lg border transition cursor-pointer ${
+                startDate === '2026-10-24' && endDate === '2026-10-24'
+                  ? 'bg-emerald-600 text-white border-emerald-600 shadow-2xs'
+                  : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
+              }`}
+            >
+              Ayer
+            </button>
+            <button
+              onClick={() => onSetDateRange('2026-10-19', '2026-10-25')}
+              className={`px-2.5 py-1.5 text-xs font-semibold rounded-lg border transition cursor-pointer ${
+                startDate === '2026-10-19' && endDate === '2026-10-25'
+                  ? 'bg-emerald-600 text-white border-emerald-600 shadow-2xs'
+                  : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
+              }`}
+            >
+              Últimos 7 días
+            </button>
+            <button
+              onClick={() => onSetDateRange('', '')}
+              className={`px-2.5 py-1.5 text-xs font-semibold rounded-lg border transition cursor-pointer ${
+                !startDate && !endDate
+                  ? 'bg-slate-900 text-white border-slate-900 shadow-2xs'
+                  : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
+              }`}
+            >
+              Ver Todo
+            </button>
+          </div>
+        </div>
+
+        <div className="text-xs text-slate-500 font-mono">
+          {startDate && endDate && startDate === endDate ? (
+            <span>📅 Fecha activa: <strong className="text-slate-800">{startDate}</strong></span>
+          ) : startDate && endDate ? (
+            <span>📅 Período: <strong className="text-slate-800">{startDate}</strong> al <strong className="text-slate-800">{endDate}</strong></span>
+          ) : (
+            <span>📅 Mostrando todos los registros</span>
+          )}
         </div>
       </div>
 

@@ -19,7 +19,9 @@ interface WhatsAppModalProps {
   isOpen: boolean;
   onClose: () => void;
   deliveries: DeliveryItem[];
-  selectedDate: string;
+  selectedDate?: string;
+  startDate?: string;
+  endDate?: string;
   kpis: KPIData;
 }
 
@@ -27,7 +29,9 @@ export const WhatsAppModal: React.FC<WhatsAppModalProps> = ({
   isOpen,
   onClose,
   deliveries,
-  selectedDate,
+  selectedDate = '',
+  startDate = '',
+  endDate = '',
   kpis
 }) => {
   const [includeHeader, setIncludeHeader] = useState(true);
@@ -38,6 +42,16 @@ export const WhatsAppModal: React.FC<WhatsAppModalProps> = ({
   const [includeFooter, setIncludeFooter] = useState(true);
   const [copied, setCopied] = useState(false);
 
+  const formattedDate = useMemo(() => {
+    if (startDate && endDate) {
+      if (startDate === endDate) return startDate;
+      return `${startDate} al ${endDate}`;
+    }
+    if (startDate) return `Desde ${startDate}`;
+    if (endDate) return `Hasta ${endDate}`;
+    return selectedDate || 'Consolidado General';
+  }, [startDate, endDate, selectedDate]);
+
   // Generate WhatsApp formatted text
   const messageText = useMemo(() => {
     const lines: string[] = [];
@@ -45,7 +59,7 @@ export const WhatsAppModal: React.FC<WhatsAppModalProps> = ({
     // 1. Header & Date
     if (includeHeader) {
       lines.push('🚚 *REPORTE DIARIO DE DESPACHOS Y ENTREGAS · RD*');
-      lines.push(`📅 *Fecha:* ${selectedDate || 'Consolidado General'}`);
+      lines.push(`📅 *Fecha / Período:* ${formattedDate}`);
       lines.push('──────────────────────');
     }
 

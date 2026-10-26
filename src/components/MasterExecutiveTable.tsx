@@ -20,7 +20,9 @@ import {
 
 interface MasterExecutiveTableProps {
   deliveries: DeliveryItem[];
-  selectedDate: string;
+  selectedDate?: string;
+  startDate?: string;
+  endDate?: string;
   visibleColumns?: VisibleColumns;
   onToggleStatus: (id: string) => void;
   onEditItem: (item: DeliveryItem) => void;
@@ -31,7 +33,9 @@ interface MasterExecutiveTableProps {
 
 export const MasterExecutiveTable: React.FC<MasterExecutiveTableProps> = ({
   deliveries,
-  selectedDate,
+  selectedDate = '',
+  startDate = '',
+  endDate = '',
   visibleColumns = DEFAULT_VISIBLE_COLUMNS,
   onToggleStatus,
   onEditItem,
@@ -39,6 +43,15 @@ export const MasterExecutiveTable: React.FC<MasterExecutiveTableProps> = ({
   onAddNewToBlock,
   onOpenColumnsModal
 }) => {
+  const dateLabel = React.useMemo(() => {
+    if (startDate && endDate) {
+      if (startDate === endDate) return `Fecha: ${startDate}`;
+      return `Período: ${startDate} al ${endDate}`;
+    }
+    if (startDate) return `Desde: ${startDate}`;
+    if (endDate) return `Hasta: ${endDate}`;
+    return selectedDate ? `Fecha: ${selectedDate}` : 'Todas las Fechas';
+  }, [startDate, endDate, selectedDate]);
   // Global totals across current filtered deliveries
   const totalGeneralViajes = deliveries.length;
   const totalGeneralBultos = deliveries.reduce((acc, d) => acc + (Number(d.bultos) || 0), 0);
@@ -128,7 +141,7 @@ export const MasterExecutiveTable: React.FC<MasterExecutiveTableProps> = ({
             </h2>
           </div>
           <p className="text-xs text-slate-400 font-mono mt-0.5" id="label-fecha-reporte">
-            Fecha: {selectedDate || 'Todas las Fechas'} · Sedes Santo Domingo &amp; Santiago de los Caballeros
+            {dateLabel} · Sedes Santo Domingo &amp; Santiago de los Caballeros
           </p>
         </div>
 
