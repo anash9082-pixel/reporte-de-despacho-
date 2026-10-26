@@ -287,9 +287,28 @@
                 </div>
             </div>
 
-            <!-- Contenedor dinámico de tablas por sede -->
-            <div id="contenedor-farmacias-por-sede" class="space-y-6">
-                <!-- Se inyectan las tablas de Sede Santo Domingo y Sede Santiago -->
+            <!-- ÁREA CAPTURABLE PARA DETALLE DE FARMACIAS Y PEDIDOS -->
+            <div id="area-captura-farmacias" class="space-y-4">
+                <!-- Encabezado Corporativo Oficial para la Captura de Farmacias -->
+                <div class="bg-slate-950 text-white px-6 py-4 rounded-xl shadow-xs border-b-2 border-slate-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="w-2.5 h-2.5 rounded-xs bg-emerald-500"></span>
+                            <h2 class="text-sm sm:text-base font-extrabold tracking-wider uppercase text-white">REPORTE DETALLADO DE FARMACIAS Y PEDIDOS · RD</h2>
+                        </div>
+                        <p class="text-xs text-slate-400 font-mono mt-0.5" id="label-fecha-farmacias">Sedes Santo Domingo &amp; Santiago</p>
+                    </div>
+                    <div class="flex items-center gap-2 font-mono text-xs">
+                        <span class="bg-slate-800 text-emerald-300 border border-slate-700 px-3 py-1 rounded-md font-bold uppercase tracking-wide">
+                            CUADRO DE CLIENTES Y DESPACHOS
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Contenedor dinámico de tablas por sede -->
+                <div id="contenedor-farmacias-por-sede" class="space-y-6">
+                    <!-- Se inyectan las tablas de Sede Santo Domingo y Sede Santiago -->
+                </div>
             </div>
         </div>
 
@@ -723,6 +742,9 @@
             const labelFarmaciaEl = document.getElementById('label-resumen-rango-farmacia');
             if (labelFarmaciaEl) labelFarmaciaEl.textContent = `📅 ${textoRango}`;
 
+            const labelFechaFarmaciasEl = document.getElementById('label-fecha-farmacias');
+            if (labelFechaFarmaciasEl) labelFechaFarmaciasEl.textContent = `${textoRango} · Sedes Santo Domingo & Santiago`;
+
             const horaEl = document.getElementById('hora-generacion');
             if (horaEl) horaEl.textContent = `Generado: ${new Date().toLocaleTimeString('es-DO', { hour: '2-digit', minute: '2-digit' })}`;
 
@@ -1034,35 +1056,99 @@
             btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span>Capturando...</span>`;
             btn.disabled = true;
 
+            const isFarmacia = PESTANA_ACTIVA === 'farmacias';
+            const elemento = isFarmacia 
+                ? (document.getElementById('area-captura-farmacias') || document.getElementById('contenedor-farmacias-por-sede'))
+                : document.getElementById('area-captura');
+
+            if (!elemento) {
+                alert("No se encontró el cuadro para capturar.");
+                btn.innerHTML = textoOriginal;
+                btn.disabled = false;
+                return;
+            }
+
+            const { fechaDesdeNorm, fechaHastaNorm } = obtenerFiltros();
+            const tabName = isFarmacia ? 'Farmacias' : 'Consolidado';
+            const fechaStr = fechaDesdeNorm && fechaHastaNorm 
+                ? (fechaDesdeNorm === fechaHastaNorm ? fechaDesdeNorm : `${fechaDesdeNorm}_al_${fechaHastaNorm}`)
+                : (fechaDesdeNorm || fechaHastaNorm || 'consolidado');
+            const fileName = `Reporte_${tabName}_Despachos_RD_${fechaStr}.png`;
+
+            const descargar = (dataUrl) => {
+                const link = document.createElement('a');
+                link.download = fileName;
+                link.href = dataUrl;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            };
+
             try {
-                const elemento = document.getElementById('area-captura');
-                const canvas = await html2canvas(elemento, {
-                    scale: 2,
-                    useCORS: true,
-                    logging: false,
-                    backgroundColor: '#ffffff',
-                    onclone: (clonedDoc) => {
-                        // Eliminar clases o estilos que contengan OKLCH en Tailwind v4 para compatibilidad total con html2canvas
-                        const allElements = clonedDoc.querySelectorAll('*');
-                        allElements.forEach(el => {
-                            const style = window.getComputedStyle(el);
-                            if (style.backgroundColor.includes('oklch')) el.style.backgroundColor = '#ffffff';
-                            if (style.color.includes('oklch')) el.style.color = '#0f172a';
-                        });
-                    }
+                // Método 1: Rasterización nativa vía SVG ForeignObject (100% compatible con OKLCH y Tailwind v4)
+                const rect = elemento.getBoundingClientRect();
+                const width = Math.ceil(rect.width || elemento.scrollWidth || 1200);
+                const height = Math.ceil(rect.height || elemento.scrollHeight || 800);
+
+                const clone = elemento.cloneNode(true);
+                clone.querySelectorAll('.no-capture, .no-print').forEach(el => el.remove());
+                clone.style.width = width + 'px';
+                clone.style.backgroundColor = '#ffffff';
+
+                const serialized = new XMLSerializer().serializeToString(clone);
+                const svgString = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><foreignObject width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml" style="background:#ffffff;font-family:sans-serif;">${serialized}</div></foreignObject></svg>`;
+                
+                const img = new Image();
+                const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+                const url = URL.createObjectURL(svgBlob);
+
+                const renderPromise = new Promise((resolve, reject) => {
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = width * 2;
+                        canvas.height = height * 2;
+                        const ctx = canvas.getContext('2d');
+                        if (!ctx) return reject(new Error("No canvas context"));
+                        ctx.scale(2, 2);
+                        ctx.fillStyle = '#ffffff';
+                        ctx.fillRect(0, 0, width, height);
+                        ctx.drawImage(img, 0, 0);
+                        URL.revokeObjectURL(url);
+                        descargar(canvas.toDataURL('image/png'));
+                        resolve(true);
+                    };
+                    img.onerror = (e) => {
+                        URL.revokeObjectURL(url);
+                        reject(e);
+                    };
                 });
 
-                const link = document.createElement('a');
-                const { fechaDesdeNorm, fechaHastaNorm } = obtenerFiltros();
-                const fechaStr = fechaDesdeNorm && fechaHastaNorm 
-                    ? (fechaDesdeNorm === fechaHastaNorm ? fechaDesdeNorm : `${fechaDesdeNorm}_al_${fechaHastaNorm}`)
-                    : (fechaDesdeNorm || fechaHastaNorm || 'consolidado');
-                link.download = `Reporte_Gerencial_Despachos_RD_${fechaStr}.png`;
-                link.href = canvas.toDataURL('image/png');
-                link.click();
-            } catch (err) {
-                console.error("Error al capturar imagen:", err);
-                alert("Ocurrió un inconveniente al generar la imagen. Inténtelo nuevamente.");
+                img.src = url;
+                await renderPromise;
+            } catch (svgErr) {
+                console.warn("SVG ForeignObject failed, attempting sanitized html2canvas...", svgErr);
+                try {
+                    // Método 2: Fallback con html2canvas y sanitización forzada de todos los colores
+                    const canvas = await html2canvas(elemento, {
+                        scale: 2,
+                        useCORS: true,
+                        logging: false,
+                        backgroundColor: '#ffffff',
+                        onclone: (clonedDoc) => {
+                            const allElements = clonedDoc.querySelectorAll('*');
+                            allElements.forEach(el => {
+                                const style = window.getComputedStyle(el);
+                                if (style.backgroundColor && style.backgroundColor.includes('oklch')) el.style.backgroundColor = '#ffffff';
+                                if (style.color && style.color.includes('oklch')) el.style.color = '#0f172a';
+                                if (style.borderColor && style.borderColor.includes('oklch')) el.style.borderColor = '#cbd5e1';
+                            });
+                        }
+                    });
+                    descargar(canvas.toDataURL('image/png'));
+                } catch (err) {
+                    console.error("Error al capturar imagen:", err);
+                    alert("Ocurrió un inconveniente al generar la imagen. Inténtelo nuevamente.");
+                }
             } finally {
                 btn.innerHTML = textoOriginal;
                 btn.disabled = false;

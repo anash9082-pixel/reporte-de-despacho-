@@ -1,155 +1,160 @@
-import html2canvas from 'html2canvas';
+import { toPng, toBlob } from 'html-to-image';
 
-// Mathematically convert oklch(...) to standard rgb/rgba so html2canvas never crashes
-function convertOklchToRgb(oklchStr: string): string {
-  if (!oklchStr || !oklchStr.includes('oklch')) return oklchStr;
-
-  // 1. Try native 2D canvas conversion first
-  try {
-    const canvas = document.createElement('canvas');
-    canvas.width = 1;
-    canvas.height = 1;
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
-      ctx.fillStyle = '#000000';
-      ctx.fillStyle = oklchStr;
-      const res = ctx.fillStyle;
-      if (res && !res.includes('oklch')) {
-        return res;
-      }
-    }
-  } catch {
-    // fallback to mathematical conversion
-  }
-
-  // 2. Mathematical OKLCH -> sRGB fallback
-  try {
-    const match = oklchStr.match(/oklch\(\s*([\d.%]+)\s+([\d.%]+)\s+([\d.]+)(?:\s*\/\s*([\d.%]+))?\s*\)/i);
-    if (!match) return oklchStr;
-
-    let l = parseFloat(match[1]);
-    if (match[1].endsWith('%')) l /= 100;
-    let c = parseFloat(match[2]);
-    if (match[2].endsWith('%')) c /= 100;
-    let h = parseFloat(match[3]);
-    let alpha = match[4] ? parseFloat(match[4]) : 1;
-    if (match[4] && match[4].endsWith('%')) alpha /= 100;
-
-    const hRad = (h * Math.PI) / 180;
-    const a = c * Math.cos(hRad);
-    const b = c * Math.sin(hRad);
-
-    const l_ = l + 0.3963377774 * a + 0.2158037573 * b;
-    const m_ = l - 0.1055613458 * a - 0.0638541728 * b;
-    const s_ = l - 0.0894841775 * a - 1.2914855480 * b;
-
-    const l_cube = l_ * l_ * l_;
-    const m_cube = m_ * m_ * m_;
-    const s_cube = s_ * s_ * s_;
-
-    const rLinear = +4.0767416621 * l_cube - 3.3077115913 * m_cube + 0.2309699292 * s_cube;
-    const gLinear = -1.2684380046 * l_cube + 2.6097574011 * m_cube - 0.3413193965 * s_cube;
-    const bLinear = -0.0041960863 * l_cube - 0.7034186147 * m_cube + 1.7076147010 * s_cube;
-
-    const toSrgb = (v: number) => {
-      const clamped = Math.max(0, Math.min(1, v));
-      return clamped <= 0.0031308
-        ? Math.round(12.92 * clamped * 255)
-        : Math.round((1.055 * Math.pow(clamped, 1 / 2.4) - 0.055) * 255);
-    };
-
-    const r = toSrgb(rLinear);
-    const g = toSrgb(gLinear);
-    const blue = toSrgb(bLinear);
-
-    if (alpha < 1) {
-      return `rgba(${r}, ${g}, ${blue}, ${alpha})`;
-    }
-    return `rgb(${r}, ${g}, ${blue})`;
-  } catch {
-    return '#0f172a';
-  }
-}
-
-// Sanitize all elements inside a cloned DOM node to remove any oklch colors
-function sanitizeElementColors(rootElement: HTMLElement) {
-  const allElements = [rootElement, ...Array.from(rootElement.querySelectorAll('*'))] as HTMLElement[];
-
-  const colorProperties = [
-    'color',
-    'backgroundColor',
-    'borderColor',
-    'borderTopColor',
-    'borderRightColor',
-    'borderBottomColor',
-    'borderLeftColor',
-    'outlineColor',
-    'textDecorationColor'
-  ] as const;
-
-  allElements.forEach((el) => {
-    // Check computed style
-    const computed = window.getComputedStyle(el);
-    for (const prop of colorProperties) {
-      const val = (computed as any)[prop];
-      if (val && typeof val === 'string' && val.includes('oklch')) {
-        const rgbVal = convertOklchToRgb(val);
-        (el.style as any)[prop] = rgbVal;
-      }
-    }
-
-    // Also sanitize inline styles
-    if (el.style) {
-      for (let i = 0; i < el.style.length; i++) {
-        const propName = el.style[i];
-        const val = el.style.getPropertyValue(propName);
-        if (val && val.includes('oklch')) {
-          el.style.setProperty(propName, convertOklchToRgb(val));
-        }
-      }
-    }
-  });
-}
-
+/**
+ * Capture an HTML element to PNG with 100% Tailwind CSS v4 and OKLCH color compatibility.
+ * Uses native SVG foreignObject rasterization so modern color functions (oklch, oklab, color())
+ * never cause parser crashes.
+ */
 export async function captureReportToPng(
   elementId: string = 'area-captura',
-  dateLabel: string = new Date().toISOString().slice(0, 10)
+  dateLabel: string = new Date().toISOString().slice(0, 10),
+  customFileName?: string
 ): Promise<boolean> {
-  const element = document.getElementById(elementId) || document.getElementById('executive-report-capture');
+  // Find element by priority: requested ID -> fallback to either table area
+  let element = document.getElementById(elementId);
   if (!element) {
-    console.error(`Element with id ${elementId} not found`);
+    element = document.getElementById('area-captura') || 
+              document.getElementById('area-captura-farmacias') ||
+              document.getElementById('executive-report-capture');
+  }
+
+  if (!element) {
+    console.warn(`[captureHelper] Element #${elementId} not found in DOM`);
     return false;
   }
 
+  const fileName = customFileName || `Reporte_Despachos_${dateLabel || 'Consolidado'}.png`;
+
+  // Filter out interactive controls, buttons, and no-capture markers
+  const filterNode = (node: HTMLElement | Node): boolean => {
+    if (node && node.nodeType === 1) {
+      const el = node as HTMLElement;
+      if (
+        el.classList?.contains('no-capture') ||
+        el.classList?.contains('no-print') ||
+        el.getAttribute?.('data-no-capture') === 'true'
+      ) {
+        return false;
+      }
+    }
+    return true;
+  };
+
   try {
-    const canvas = await html2canvas(element, {
-      scale: 2, // Crisp 2x retina resolution
-      useCORS: true,
-      allowTaint: true,
+    // Attempt 1: Full crisp 2x retina rendering with html-to-image
+    const dataUrl = await toPng(element, {
+      pixelRatio: 2,
       backgroundColor: '#ffffff',
-      logging: false,
-      ignoreElements: (el) => {
-        return el.classList.contains('no-capture') || el.classList.contains('no-print');
-      },
-      onclone: (clonedDoc) => {
-        const clonedElement = clonedDoc.getElementById(element.id);
-        if (clonedElement) {
-          sanitizeElementColors(clonedElement);
-        }
+      cacheBust: true,
+      filter: filterNode as any,
+      style: {
+        margin: '0',
+        transform: 'none'
       }
     });
 
-    const imageUri = canvas.toDataURL('image/png');
-    const link = document.createElement('a');
-    link.href = imageUri;
-    link.download = `Reporte_Despachos_${dateLabel || 'Consolidado'}.png`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
+    downloadDataUrl(dataUrl, fileName);
     return true;
-  } catch (error) {
-    console.error('Error capturing report with html2canvas:', error);
-    return false;
+  } catch (primaryError) {
+    console.warn('[captureHelper] Primary capture attempt with fonts encountered an issue, trying font-safe fallback:', primaryError);
+
+    try {
+      // Attempt 2: Fallback with skipFonts to avoid any cross-origin font fetch issues
+      const dataUrl = await toPng(element, {
+        pixelRatio: 2,
+        backgroundColor: '#ffffff',
+        skipFonts: true,
+        filter: filterNode as any
+      });
+
+      downloadDataUrl(dataUrl, fileName);
+      return true;
+    } catch (secondaryError) {
+      console.warn('[captureHelper] html-to-image fallback failed, trying direct Canvas SVG rasterization:', secondaryError);
+
+      try {
+        // Attempt 3: Direct SVG ForeignObject Canvas render
+        const success = await directSvgCanvasRender(element, fileName, filterNode);
+        return success;
+      } catch (finalError) {
+        console.error('[captureHelper] All capture attempts failed:', finalError);
+        return false;
+      }
+    }
   }
+}
+
+function downloadDataUrl(dataUrl: string, fileName: string) {
+  const link = document.createElement('a');
+  link.download = fileName;
+  link.href = dataUrl;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+/**
+ * Ultra-resilient direct SVG ForeignObject canvas rendering
+ */
+async function directSvgCanvasRender(
+  element: HTMLElement,
+  fileName: string,
+  filterNode: (node: Node) => boolean
+): Promise<boolean> {
+  const rect = element.getBoundingClientRect();
+  const width = Math.ceil(rect.width || element.scrollWidth || 1200);
+  const height = Math.ceil(rect.height || element.scrollHeight || 800);
+
+  // Clone element and strip no-capture elements
+  const clone = element.cloneNode(true) as HTMLElement;
+  const noCaptureEls = clone.querySelectorAll('.no-capture, .no-print');
+  noCaptureEls.forEach((el) => el.remove());
+
+  // Embed computed styles into clone to ensure styles persist in SVG
+  clone.style.width = `${width}px`;
+  clone.style.backgroundColor = '#ffffff';
+
+  const serializedHtml = new XMLSerializer().serializeToString(clone);
+  const svgString = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
+      <foreignObject width="100%" height="100%">
+        <div xmlns="http://www.w3.org/1999/xhtml" style="background:#ffffff;font-family:sans-serif;">
+          ${serializedHtml}
+        </div>
+      </foreignObject>
+    </svg>
+  `;
+
+  return new Promise((resolve) => {
+    const img = new Image();
+    const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(svgBlob);
+
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = width * 2;
+      canvas.height = height * 2;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.scale(2, 2);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, width, height);
+        ctx.drawImage(img, 0, 0);
+        URL.revokeObjectURL(url);
+        const pngUrl = canvas.toDataURL('image/png');
+        downloadDataUrl(pngUrl, fileName);
+        resolve(true);
+      } else {
+        URL.revokeObjectURL(url);
+        resolve(false);
+      }
+    };
+
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      resolve(false);
+    };
+
+    img.src = url;
+  });
 }

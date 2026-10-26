@@ -428,17 +428,21 @@ export default function App() {
     }
   };
 
-  // Capture Report in PNG using html2canvas (fixed OKLCH bug)
+  // Capture Report in PNG using modern SVG canvas engine (eliminates OKLCH color error)
   const handleCapturePng = async () => {
     setIsCapturing(true);
-    showToast('Generando captura en imagen PNG de alta resolución...');
+    const isFarmaciasTab = activeTab === 'farmacias';
+    const targetElementId = isFarmaciasTab ? 'area-captura-farmacias' : 'area-captura';
+    const tabName = isFarmaciasTab ? 'Farmacias' : 'Consolidado';
+    showToast(`Generando captura en imagen PNG (${tabName})...`);
     try {
       const dateTag = startDate && endDate
         ? (startDate === endDate ? startDate : `${startDate}_al_${endDate}`)
         : 'Consolidado';
-      const success = await captureReportToPng('area-captura', dateTag);
+      const fileName = `Reporte_${tabName}_Despachos_RD_${dateTag}.png`;
+      const success = await captureReportToPng(targetElementId, dateTag, fileName);
       if (success) {
-        showToast('📷 ¡Reporte capturado exitosamente en PNG! Listo para enviar por WhatsApp o correo.');
+        showToast(`📷 ¡Cuadro de ${tabName} capturado exitosamente en PNG! Listo para enviar por WhatsApp.`);
       } else {
         showToast('No se pudo generar la captura. Intente nuevamente.');
       }
@@ -704,6 +708,8 @@ export default function App() {
               onStartDateChange={setStartDate}
               onEndDateChange={setEndDate}
               onSetDateRange={handleSetDateRange}
+              onCapturePng={handleCapturePng}
+              isCapturing={isCapturing}
             />
           </section>
         )}

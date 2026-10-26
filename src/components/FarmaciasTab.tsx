@@ -14,7 +14,8 @@ import {
   ExternalLink,
   Store,
   FileSpreadsheet,
-  Calendar
+  Calendar,
+  Camera
 } from 'lucide-react';
 
 interface FarmaciasTabProps {
@@ -24,6 +25,8 @@ interface FarmaciasTabProps {
   onStartDateChange: (date: string) => void;
   onEndDateChange: (date: string) => void;
   onSetDateRange: (start: string, end: string) => void;
+  onCapturePng?: () => void;
+  isCapturing?: boolean;
 }
 
 export const FarmaciasTab: React.FC<FarmaciasTabProps> = ({
@@ -32,7 +35,9 @@ export const FarmaciasTab: React.FC<FarmaciasTabProps> = ({
   endDate,
   onStartDateChange,
   onEndDateChange,
-  onSetDateRange
+  onSetDateRange,
+  onCapturePng,
+  isCapturing = false
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedHubFilter, setSelectedHubFilter] = useState<'all' | 'santodomingo' | 'santiago'>('all');
@@ -467,38 +472,83 @@ export const FarmaciasTab: React.FC<FarmaciasTabProps> = ({
           </button>
         </div>
 
-        {/* Search */}
-        <div className="relative w-full sm:w-80">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Buscar por farmacia, pedido, chofer o provincia..."
-            className="w-full pl-9 pr-4 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white"
-          />
+        {/* Search & Capture Action */}
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <div className="relative flex-1 sm:w-72">
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Buscar por farmacia, pedido, chofer o provincia..."
+              className="w-full pl-9 pr-4 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white"
+            />
+          </div>
+
+          {onCapturePng && (
+            <button
+              onClick={onCapturePng}
+              disabled={isCapturing}
+              className="px-3.5 py-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors whitespace-nowrap shadow-2xs inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shrink-0"
+              title="Descargar imagen PNG del cuadro de farmacias y pedidos"
+            >
+              <Camera className="w-3.5 h-3.5" />
+              <span>{isCapturing ? 'Capturando...' : '📷 Capturar Cuadro'}</span>
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Render Sede Santo Domingo */}
-      {(selectedHubFilter === 'all' || selectedHubFilter === 'santodomingo') && (
-        renderSedeTable(
-          'SEDE SANTO DOMINGO - DETALLE DE FARMACIAS Y PEDIDOS',
-          'Santo Domingo',
-          sdDeliveries,
-          'blue'
-        )
-      )}
+      {/* ÁREA CAPTURABLE PARA DETALLE DE FARMACIAS Y PEDIDOS */}
+      <div id="area-captura-farmacias" className="space-y-4">
+        {/* Encabezado Corporativo Oficial para la Captura de Farmacias */}
+        <div className="bg-slate-950 text-white px-6 py-4 rounded-xl shadow-xs border-b-2 border-slate-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-xs bg-emerald-500"></span>
+              <h2 className="text-sm sm:text-base font-extrabold tracking-wider uppercase text-white">
+                REPORTE DETALLADO DE FARMACIAS Y PEDIDOS · RD
+              </h2>
+            </div>
+            <p className="text-xs text-slate-400 font-mono mt-0.5">
+              {startDate && endDate 
+                ? (startDate === endDate ? `Fecha: ${startDate}` : `Período: ${startDate} al ${endDate}`)
+                : 'Todas las Fechas'} · Sedes Santo Domingo &amp; Santiago
+            </p>
+          </div>
+          <div className="flex items-center gap-2 font-mono text-xs">
+            <span className="bg-slate-800 text-emerald-300 border border-slate-700 px-3 py-1 rounded-md font-bold">
+              {stats.farmaciasConNombre || stats.totalDespachos} Farmacias
+            </span>
+            <span className="bg-slate-800 text-blue-300 border border-slate-700 px-3 py-1 rounded-md font-bold">
+              {stats.totalBultos.toLocaleString()} Bultos
+            </span>
+            <span className="bg-emerald-950 text-emerald-300 border border-emerald-800 px-3 py-1 rounded-md font-bold">
+              {stats.efectividad}% Efectividad
+            </span>
+          </div>
+        </div>
 
-      {/* Render Sede Santiago */}
-      {(selectedHubFilter === 'all' || selectedHubFilter === 'santiago') && (
-        renderSedeTable(
-          'SEDE SANTIAGO DE LOS CABALLEROS - DETALLE DE FARMACIAS Y PEDIDOS',
-          'Santiago',
-          stgDeliveries,
-          'amber'
-        )
-      )}
+        {/* Render Sede Santo Domingo */}
+        {(selectedHubFilter === 'all' || selectedHubFilter === 'santodomingo') && (
+          renderSedeTable(
+            'SEDE SANTO DOMINGO - DETALLE DE FARMACIAS Y PEDIDOS',
+            'Santo Domingo',
+            sdDeliveries,
+            'blue'
+          )
+        )}
+
+        {/* Render Sede Santiago */}
+        {(selectedHubFilter === 'all' || selectedHubFilter === 'santiago') && (
+          renderSedeTable(
+            'SEDE SANTIAGO DE LOS CABALLEROS - DETALLE DE FARMACIAS Y PEDIDOS',
+            'Santiago',
+            stgDeliveries,
+            'amber'
+          )
+        )}
+      </div>
     </div>
   );
 };
