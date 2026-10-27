@@ -21,11 +21,12 @@ import { KPICards } from './components/KPICards';
 import { FilterBar } from './components/FilterBar';
 import { MasterExecutiveTable } from './components/MasterExecutiveTable';
 import { FarmaciasTab } from './components/FarmaciasTab';
+import { ReporteGerencialDespachoTab } from './components/ReporteGerencialDespachoTab';
 import { DeliveryFormModal } from './components/DeliveryFormModal';
 import { GoogleSheetsModal } from './components/GoogleSheetsModal';
 import { ColumnVisibilityModal } from './components/ColumnVisibilityModal';
 import { WhatsAppModal } from './components/WhatsAppModal';
-import { exportDeliveriesToCSV, normalizeDateString } from './utils/csvHelper';
+import { exportDeliveriesToCSV, normalizeDateString, getTodayString, getYesterdayString } from './utils/csvHelper';
 import { captureReportToPng, copyReportImageToClipboard } from './utils/captureHelper';
 import { exportSingleFileHtml } from './utils/standaloneExporter';
 import { 
@@ -50,25 +51,24 @@ import {
   SlidersHorizontal,
   MessageSquare,
   Store,
-  Copy
+  Copy,
+  MapPin
 } from 'lucide-react';
 
-const STORAGE_KEY = 'rd_despachos_report_data_v4';
-const SHEET_URL_KEY = 'rd_despachos_report_sheet_url_v4';
-const VISIBLE_COLUMNS_KEY = 'rd_despachos_visible_columns_v4';
+const STORAGE_KEY = 'rd_despachos_report_data_v6';
+const SHEET_URL_KEY = 'rd_despachos_report_sheet_url_v6';
+const VISIBLE_COLUMNS_KEY = 'rd_despachos_visible_columns_v6';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'consolidado' | 'farmacias'>('consolidado');
-  const [selectedDate, setSelectedDate] = useState<string>('2026-10-25');
+  const [activeTab, setActiveTab] = useState<'consolidado' | 'farmacias' | 'provincias'>('consolidado');
+  const [selectedDate, setSelectedDate] = useState<string>(() => getTodayString());
+  const [selectedProvincia, setSelectedProvincia] = useState<string>('all');
   const [isCopying, setIsCopying] = useState(false);
 
   const handleShiftDate = (days: number) => {
-    if (!selectedDate) {
-      setSelectedDate('2026-10-25');
-      return;
-    }
+    const baseDate = selectedDate || getTodayString();
     try {
-      const parts = selectedDate.split('-');
+      const parts = baseDate.split('-');
       if (parts.length === 3) {
         const year = parseInt(parts[0], 10);
         const month = parseInt(parts[1], 10) - 1;
@@ -264,6 +264,13 @@ export default function App() {
       const { items } = await loadGoogleSheetDeliveries(activeSheetUrl || DEFAULT_SHEET_URL);
       if (items && items.length > 0) {
         setDeliveries(items);
+        const todayStr = getTodayString();
+        const availableDates = Array.from(new Set(items.map(i => normalizeDateString(i.fecha)).filter(Boolean)));
+        if (availableDates.includes(todayStr)) {
+          setSelectedDate(todayStr);
+        } else if (availableDates.length > 0 && (!selectedDate || !availableDates.includes(selectedDate))) {
+          setSelectedDate(availableDates.sort().reverse()[0]);
+        }
         if (notify) {
           showToast(`¡Sincronizado! Se cargaron ${items.length} despachos en vivo desde tu Google Sheet.`);
         }
@@ -287,7 +294,26 @@ export default function App() {
     handleDirectSheetSync(false);
   }, []);
 
-  // Filter deliveries by single day (por día solo), unified Hub (SD / STI), service type, status, and search query
+  // Dynamically calculate available provinces for the active date (with count of shipments)
+  const availableProvincias = useMemo(() => {
+    const map = new Map<string, number>();
+    deliveries.forEach((item) => {
+      if (selectedDate) {
+        const itemDate = normalizeDateString(item.fecha);
+        if (itemDate && itemDate !== selectedDate) return;
+      }
+      const prov = (item.provincia || '').trim();
+      if (prov) {
+        map.set(prov, (map.get(prov) || 0) + 1);
+      }
+    });
+
+    return Array.from(map.entries())
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count);
+  }, [deliveries, selectedDate]);
+
+  // Filter deliveries by single day (por día solo), unified Hub (SD / STI), service type, status, province, and search query
   const filteredDeliveries = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
 
@@ -322,6 +348,13 @@ export default function App() {
         if (statusFilter === 'Pendiente' && isEntregado) return false;
       }
 
+      // Province filter (Botón/Selector de Provincia)
+      if (selectedProvincia !== 'all') {
+        const itemProv = (item.provincia || '').toLowerCase().trim();
+        const targetProv = selectedProvincia.toLowerCase().trim();
+        if (itemProv !== targetProv) return false;
+      }
+
       // Search query
       if (query) {
         const matchChofer = (item.chofer || '').toLowerCase().includes(query);
@@ -337,7 +370,7 @@ export default function App() {
       }
       return true;
     });
-  }, [deliveries, selectedDate, selectedHub, selectedService, statusFilter, searchQuery]);
+  }, [deliveries, selectedDate, selectedHub, selectedService, statusFilter, selectedProvincia, searchQuery]);
 
   // Overall KPIs
   const kpis: KPIData = useMemo(() => {
@@ -432,7 +465,8 @@ export default function App() {
     setSelectedHub('all');
     setSelectedService('all');
     setStatusFilter('all');
-    setSelectedDate('2026-10-25');
+    setSelectedProvincia('all');
+    setSelectedDate(getTodayString());
     setSearchQuery('');
     showToast('Filtros restablecidos al día de hoy.');
   };
@@ -450,9 +484,16 @@ export default function App() {
   // Capture Report in PNG using modern SVG canvas engine (eliminates OKLCH color error)
   const handleCapturePng = async () => {
     setIsCapturing(true);
-    const isFarmaciasTab = activeTab === 'farmacias';
-    const targetElementId = isFarmaciasTab ? 'area-captura-farmacias' : 'area-captura';
-    const tabName = isFarmaciasTab ? 'Farmacias' : 'Consolidado';
+    const targetElementId = 
+      activeTab === 'farmacias' ? 'area-captura-farmacias' :
+      activeTab === 'provincias' ? 'area-captura-provincias' : 
+      'area-captura';
+
+    const tabName = 
+      activeTab === 'farmacias' ? 'Farmacias' :
+      activeTab === 'provincias' ? 'Reporte_Gerencial_Provincias' : 
+      'Consolidado';
+
     showToast(`Generando captura en imagen PNG (${tabName})...`);
     try {
       const dateTag = selectedDate || 'Todas_Las_Fechas';
@@ -474,9 +515,16 @@ export default function App() {
   // NEW: Copy Report with Photo directly to clipboard for instant Ctrl+V into WhatsApp Web, Word, Slack
   const handleCopyReportWithPhoto = async () => {
     setIsCopying(true);
-    const isFarmaciasTab = activeTab === 'farmacias';
-    const targetElementId = isFarmaciasTab ? 'area-captura-farmacias' : 'area-captura';
-    const tabName = isFarmaciasTab ? 'Farmacias y Pedidos' : 'Reporte Consolidado';
+    const targetElementId = 
+      activeTab === 'farmacias' ? 'area-captura-farmacias' :
+      activeTab === 'provincias' ? 'area-captura-provincias' : 
+      'area-captura';
+
+    const tabName = 
+      activeTab === 'farmacias' ? 'Farmacias y Pedidos' :
+      activeTab === 'provincias' ? 'Reporte Gerencial por Provincias' : 
+      'Reporte Consolidado';
+
     showToast(`Copiando cuadro de ${tabName} al portapapeles...`);
 
     const summaryText = `📊 *REPORTE DIARIO DE ENTREGAS Y DESPACHOS RD*\n` +
@@ -693,9 +741,21 @@ export default function App() {
             <Store className={`w-4 h-4 ${activeTab === 'farmacias' ? 'text-emerald-400' : 'text-slate-500'}`} />
             <span>Pestaña 2: Detalle de Farmacias y Pedidos</span>
           </button>
+
+          <button
+            onClick={() => setActiveTab('provincias')}
+            className={`flex-1 sm:flex-initial px-4 py-2.5 rounded-lg font-extrabold text-xs sm:text-sm inline-flex items-center justify-center gap-2 transition cursor-pointer ${
+              activeTab === 'provincias'
+                ? 'bg-rose-700 text-white shadow-sm'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <MapPin className={`w-4 h-4 ${activeTab === 'provincias' ? 'text-rose-200' : 'text-rose-500'}`} />
+            <span>Pestaña 3: Reporte Gerencial de Despacho</span>
+          </button>
         </div>
 
-        {activeTab === 'consolidado' ? (
+        {activeTab === 'consolidado' && (
           <>
             {/* 1. KPIs Section with Unified Hub Breakdowns */}
             <section aria-label="Resumen de Indicadores Clave">
@@ -711,6 +771,9 @@ export default function App() {
                 onSelectService={setSelectedService}
                 statusFilter={statusFilter}
                 onSelectStatus={setStatusFilter}
+                selectedProvincia={selectedProvincia}
+                onSelectProvincia={setSelectedProvincia}
+                availableProvincias={availableProvincias}
                 searchQuery={searchQuery}
                 onSearchChange={setSearchQuery}
                 selectedDate={selectedDate}
@@ -752,8 +815,9 @@ export default function App() {
               />
             </section>
           </>
-        ) : (
-          /* Pestaña 2: Detalle de Farmacias y Pedidos */
+        )}
+
+        {activeTab === 'farmacias' && (
           <section aria-label="Detalle de Farmacias y Pedidos por Sede">
             <FarmaciasTab
               deliveries={filteredDeliveries}
@@ -764,6 +828,29 @@ export default function App() {
               isCapturing={isCapturing}
               onCopyReportWithPhoto={handleCopyReportWithPhoto}
               isCopying={isCopying}
+            />
+          </section>
+        )}
+
+        {activeTab === 'provincias' && (
+          <section aria-label="Reporte Gerencial de Despacho Agrupado por Provincia">
+            <ReporteGerencialDespachoTab
+              deliveries={deliveries}
+              selectedDate={selectedDate}
+              onDateChange={setSelectedDate}
+              onShiftDate={handleShiftDate}
+              selectedProvincia={selectedProvincia}
+              onSelectProvincia={setSelectedProvincia}
+              availableProvincias={availableProvincias}
+              selectedHub={selectedHub}
+              onSelectHub={setSelectedHub}
+              onToggleStatus={handleToggleStatus}
+              onCapturePng={handleCapturePng}
+              isCapturing={isCapturing}
+              onCopyReportWithPhoto={handleCopyReportWithPhoto}
+              isCopying={isCopying}
+              onSyncDirect={() => handleDirectSheetSync(true)}
+              isSyncing={isSyncingSheet}
             />
           </section>
         )}

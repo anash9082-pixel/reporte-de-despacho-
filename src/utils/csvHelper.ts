@@ -97,11 +97,40 @@ export function downloadCSVTemplate(): void {
   document.body.removeChild(link);
 }
 
+export function getTodayString(): string {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+export function getYesterdayString(): string {
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+export function formatDateLabel(dateStr: string): string {
+  if (!dateStr) return '';
+  const parts = dateStr.split('-');
+  if (parts.length === 3) {
+    const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+    const dia = parseInt(parts[2], 10);
+    const mesIdx = parseInt(parts[1], 10) - 1;
+    return `${dia} ${meses[mesIdx] || ''}`;
+  }
+  return dateStr;
+}
+
 export function normalizeDateString(dateStr: string): string {
   if (!dateStr) return '';
   const s = String(dateStr).trim();
   
-  // DD-MM-YYYY or DD/MM/YYYY (e.g. 25-10-2026 or 25/10/2026)
+  // DD-MM-YYYY or DD/MM/YYYY (e.g. 27-10-2026 or 27/10/2026)
   const dmy = s.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);
   if (dmy) {
     const day = dmy[1].padStart(2, '0');
@@ -110,7 +139,16 @@ export function normalizeDateString(dateStr: string): string {
     return `${year}-${month}-${day}`;
   }
 
-  // YYYY-MM-DD or YYYY/MM/DD (e.g. 2026-10-25)
+  // DD-MM-YY or DD/MM/YY (e.g. 26-10-26)
+  const dmyShort = s.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{2})$/);
+  if (dmyShort) {
+    const day = dmyShort[1].padStart(2, '0');
+    const month = dmyShort[2].padStart(2, '0');
+    const year = `20${dmyShort[3]}`;
+    return `${year}-${month}-${day}`;
+  }
+
+  // YYYY-MM-DD or YYYY/MM/DD (e.g. 2026-10-27)
   const ymd = s.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/);
   if (ymd) {
     const year = ymd[1];
@@ -152,7 +190,7 @@ export function detectBlockFromOrigin(origenRaw: string, fallbackIndex: number =
 
 export function parseCSVRowsToDeliveries(rows: Record<string, any>[]): DeliveryItem[] {
   const result: DeliveryItem[] = [];
-  const todayStr = '2026-10-25';
+  const currentToday = getTodayString();
 
   rows.forEach((row, index) => {
     // Tolerant column lookup
@@ -160,15 +198,45 @@ export function parseCSVRowsToDeliveries(rows: Record<string, any>[]): DeliveryI
       for (const k of keys) {
         for (const actualKey of Object.keys(row)) {
           if (actualKey.trim().toLowerCase() === k.toLowerCase()) {
-            return String(row[actualKey] ?? '').trim();
+            const val = String(row[actualKey] ?? '').trim();
+            if (val) return val;
           }
         }
       }
       return '';
     };
 
-    const fechaRaw = findVal('fecha', 'date', 'dia', 'día') || todayStr;
-    const fecha = normalizeDateString(fechaRaw) || todayStr;
+    // Resilient Date Lookup:
+    // 1. Try column names 'fecha', 'date', 'dia', 'día'
+    let fechaRaw = findVal('fecha', 'date', 'dia', 'día');
+
+    // 2. If not found (e.g. cell A1 was left blank in Google Sheet, resulting in key '' or ' ')
+    if (!fechaRaw) {
+      if (row[''] !== undefined && String(row['']).trim()) {
+        fechaRaw = String(row['']).trim();
+      } else {
+        const firstKey = Object.keys(row)[0];
+        if (firstKey !== undefined && row[firstKey] !== undefined) {
+          const firstVal = String(row[firstKey]).trim();
+          if (/^\d{1,4}[-/]\d{1,2}[-/]\d{1,4}/.test(firstVal)) {
+            fechaRaw = firstVal;
+          }
+        }
+      }
+    }
+
+    // 3. Scan all keys in row if still not identified as date
+    if (!fechaRaw || !/^\d{1,4}[-/]\d{1,2}[-/]\d{1,4}/.test(fechaRaw)) {
+      for (const k of Object.keys(row)) {
+        const val = String(row[k] ?? '').trim();
+        if (/^\d{1,4}[-/]\d{1,2}[-/]\d{1,4}/.test(val)) {
+          fechaRaw = val;
+          break;
+        }
+      }
+    }
+
+    const fecha = normalizeDateString(fechaRaw) || currentToday;
     const origenRaw = findVal('origen', 'base', 'bloque', 'sede', 'bloque id', 'bloque_id');
     const unidad = findVal('unidad', 'unidad de entrega', 'vehiculo', 'vehículo', 'ficha') || `UNIDAD ${index + 1}`;
     const chofer = findVal('chofer', 'conductor', 'chofer / conductor') || 'Por asignar';
@@ -182,6 +250,11 @@ export function parseCSVRowsToDeliveries(rows: Record<string, any>[]): DeliveryI
     const observacion = findVal('observacion', 'observación', 'notas', 'comentario') || 'Sin novedad';
     const farmacia = findVal('farmacia/distribuidora', 'farmacia / distribuidora', 'farmacia', 'distribuidora', 'cliente') || '';
     const numeroPedido = findVal('numero de pedido', 'número de pedido', 'numero pedido', 'pedido', 'no. pedido', 'orden') || '';
+
+    // Ignore completely empty phantom rows
+    if (!unidad && !chofer && !farmacia && !numeroPedido && !bultosRaw) {
+      return;
+    }
 
     // Map origen to blockId flexibly
     const blockId: BlockId = detectBlockFromOrigin(origenRaw, index);

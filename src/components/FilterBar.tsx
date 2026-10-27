@@ -18,8 +18,11 @@ import {
   SlidersHorizontal,
   MessageSquare,
   Copy,
-  Check
+  Check,
+  MapPin
 } from 'lucide-react';
+import { PROVINCIAS_RD } from '../data/mockData';
+import { getTodayString, getYesterdayString, formatDateLabel } from '../utils/csvHelper';
 
 interface FilterBarProps {
   selectedHub: 'all' | HubId;
@@ -28,6 +31,9 @@ interface FilterBarProps {
   onSelectService: (service: ServiceFilterType) => void;
   statusFilter: 'all' | DeliveryStatus;
   onSelectStatus: (status: 'all' | DeliveryStatus) => void;
+  selectedProvincia: string;
+  onSelectProvincia: (provincia: string) => void;
+  availableProvincias: { name: string; count: number }[];
   searchQuery: string;
   onSearchChange: (query: string) => void;
   selectedDate: string;
@@ -57,6 +63,9 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   onSelectService,
   statusFilter,
   onSelectStatus,
+  selectedProvincia,
+  onSelectProvincia,
+  availableProvincias,
   searchQuery,
   onSearchChange,
   selectedDate,
@@ -90,19 +99,23 @@ export const FilterBar: React.FC<FilterBarProps> = ({
     { id: 'blanco', label: 'Transporte Blanco' }
   ];
 
+  const today = getTodayString();
+  const yesterday = getYesterdayString();
+
   const handleSetToday = () => {
-    onDateChange('2026-10-25');
+    onDateChange(today);
   };
 
   const handleSetYesterday = () => {
-    onDateChange('2026-10-24');
+    onDateChange(yesterday);
   };
 
   const handleSetAllDates = () => {
     onDateChange('');
   };
 
-  const isTodayActive = selectedDate === '2026-10-25';
+  const isTodayActive = selectedDate === today;
+  const isYesterdayActive = selectedDate === yesterday;
   const isAllDatesActive = !selectedDate;
 
   return (
@@ -157,21 +170,21 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                   ? 'bg-blue-600 text-white border-blue-600 shadow-2xs'
                   : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
               }`}
-              title="Filtrar despachos de hoy (25 Octubre)"
+              title={`Filtrar despachos de hoy (${formatDateLabel(today)})`}
             >
-              Hoy (25 Oct)
+              Hoy ({formatDateLabel(today)})
             </button>
 
             <button
               onClick={handleSetYesterday}
               className={`px-3 py-1.5 text-xs font-semibold rounded-lg border transition cursor-pointer ${
-                selectedDate === '2026-10-24'
+                isYesterdayActive
                   ? 'bg-blue-600 text-white border-blue-600 shadow-2xs'
                   : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
               }`}
-              title="Filtrar despachos del día de ayer"
+              title={`Filtrar despachos de ayer (${formatDateLabel(yesterday)})`}
             >
-              Ayer
+              Ayer ({formatDateLabel(yesterday)})
             </button>
 
             <button
@@ -361,8 +374,74 @@ export const FilterBar: React.FC<FilterBarProps> = ({
         </div>
       </div>
 
-      {/* 3. Barra de Búsqueda Integrada */}
-      <div className="flex items-center justify-between gap-3 pt-1">
+      {/* 3. Filtro Territorial por Provincia (Botones Rápidos con Conteo de Unidades/Pedidos) */}
+      <div className="flex flex-col gap-2 pt-1 border-t border-slate-100">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800">
+            <MapPin className="w-3.5 h-3.5 text-rose-600" />
+            <span>Filtrar por Provincia:</span>
+            {selectedProvincia !== 'all' && (
+              <span className="bg-rose-100 text-rose-800 text-[10px] font-bold px-2 py-0.5 rounded-full border border-rose-200">
+                Activa: {selectedProvincia}
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <button
+            onClick={() => onSelectProvincia('all')}
+            className={`px-3 py-1.5 text-xs font-bold rounded-lg border transition cursor-pointer ${
+              selectedProvincia === 'all'
+                ? 'bg-rose-600 text-white border-rose-600 shadow-2xs'
+                : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
+            }`}
+          >
+            Todas las Provincias
+          </button>
+
+          {availableProvincias.map(({ name, count }) => {
+            const isSelected = selectedProvincia.toLowerCase() === name.toLowerCase();
+            return (
+              <button
+                key={name}
+                onClick={() => onSelectProvincia(isSelected ? 'all' : name)}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border transition cursor-pointer ${
+                  isSelected
+                    ? 'bg-rose-600 text-white border-rose-600 shadow-2xs font-bold'
+                    : 'bg-white text-slate-700 border-slate-300 hover:bg-rose-50 hover:border-rose-300'
+                }`}
+                title={`Filtrar despachos en ${name} (${count} registros)`}
+              >
+                <MapPin className={`w-3 h-3 ${isSelected ? 'text-rose-200' : 'text-rose-500'}`} />
+                <span>{name}</span>
+                <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold ${
+                  isSelected ? 'bg-rose-800 text-rose-100' : 'bg-slate-100 text-slate-700'
+                }`}>
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+
+          {/* Selector de todas las 32 provincias de RD */}
+          <div className="inline-block">
+            <select
+              value={selectedProvincia}
+              onChange={(e) => onSelectProvincia(e.target.value)}
+              className="text-xs bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 text-slate-700 font-semibold focus:outline-none focus:ring-1 focus:ring-rose-500 cursor-pointer"
+            >
+              <option value="all">📍 Ver todas las provincias ({PROVINCIAS_RD.length})...</option>
+              {PROVINCIAS_RD.map((prov) => (
+                <option key={prov} value={prov}>{prov}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* 4. Barra de Búsqueda Integrada */}
+      <div className="flex items-center justify-between gap-3 pt-1 border-t border-slate-100">
         <div className="relative flex-1 max-w-lg">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
@@ -386,7 +465,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           <span className="font-mono font-bold text-slate-900 bg-slate-100 px-2.5 py-1 rounded-md border border-slate-200">
             {totalFilteredCount} {totalFilteredCount === 1 ? 'unidad' : 'unidades'} en pantalla
           </span>
-          {(searchQuery || selectedHub !== 'all' || selectedService !== 'all' || statusFilter !== 'all') && (
+          {(searchQuery || selectedHub !== 'all' || selectedService !== 'all' || statusFilter !== 'all' || selectedProvincia !== 'all') && (
             <button
               onClick={onResetData}
               className="text-xs text-blue-600 hover:text-blue-800 font-semibold cursor-pointer underline flex items-center gap-1"

@@ -20,6 +20,7 @@ import {
   ChevronLeft,
   ChevronRight
 } from 'lucide-react';
+import { getTodayString, getYesterdayString, formatDateLabel } from '../utils/csvHelper';
 
 interface FarmaciasTabProps {
   deliveries: DeliveryItem[];
@@ -392,24 +393,24 @@ export const FarmaciasTab: React.FC<FarmaciasTabProps> = ({
           {/* Botones de selección rápida */}
           <div className="flex items-center gap-1">
             <button
-              onClick={() => onDateChange('2026-10-25')}
+              onClick={() => onDateChange(getTodayString())}
               className={`px-3 py-1.5 text-xs font-bold rounded-lg border transition cursor-pointer ${
-                selectedDate === '2026-10-25'
+                selectedDate === getTodayString()
                   ? 'bg-emerald-600 text-white border-emerald-600 shadow-2xs'
                   : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
               }`}
             >
-              Hoy (25 Oct)
+              Hoy ({formatDateLabel(getTodayString())})
             </button>
             <button
-              onClick={() => onDateChange('2026-10-24')}
+              onClick={() => onDateChange(getYesterdayString())}
               className={`px-3 py-1.5 text-xs font-semibold rounded-lg border transition cursor-pointer ${
-                selectedDate === '2026-10-24'
+                selectedDate === getYesterdayString()
                   ? 'bg-emerald-600 text-white border-emerald-600 shadow-2xs'
                   : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
               }`}
             >
-              Ayer
+              Ayer ({formatDateLabel(getYesterdayString())})
             </button>
             <button
               onClick={() => onDateChange('')}

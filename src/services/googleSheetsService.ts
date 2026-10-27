@@ -27,6 +27,9 @@ export function extractSpreadsheetId(urlOrId: string): string | null {
 /**
  * Fetch Google Sheet data in real-time via GViz JSONP (bypasses browser CORS restrictions completely)
  */
+/**
+ * Fetch Google Sheet data in real-time via GViz JSONP (bypasses browser CORS restrictions completely)
+ */
 export function fetchSheetViaGViz(sheetId: string): Promise<DeliveryItem[]> {
   return new Promise((resolve, reject) => {
     const callbackName = `gviz_callback_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
@@ -38,8 +41,8 @@ export function fetchSheetViaGViz(sheetId: string): Promise<DeliveryItem[]> {
     // Timeout safety
     const timeout = setTimeout(() => {
       cleanup();
-      reject(new Error('Tiempo de espera agotado al conectar con Google Sheets.'));
-    }, 12000);
+      reject(new Error('Tiempo de espera agotado en GViz.'));
+    }, 7000);
 
     const cleanup = () => {
       clearTimeout(timeout);
@@ -49,7 +52,7 @@ export function fetchSheetViaGViz(sheetId: string): Promise<DeliveryItem[]> {
       }
     };
 
-    (window as any)[callbackName] = (response: any) => {
+    const handleGvizResponse = (response: any) => {
       cleanup();
       try {
         if (!response || !response.table) {
@@ -74,6 +77,7 @@ export function fetchSheetViaGViz(sheetId: string): Promise<DeliveryItem[]> {
 
         const standardHeaders = ['Fecha', 'Origen', 'Unidad', 'Chofer', 'Ayudante', 'Provincia', 'Bultos', 'Estado', 'Observación'];
         let startIndex = 0;
+
         // Check if row 0 is actually the header row (e.g. "Fecha", "Origen"...)
         const firstRowCells = rawRows[0]?.c?.map((cell: any) => String(cell?.v || '').trim().toLowerCase()) || [];
         const isHeaderRow = firstRowCells.some((val: string) => 
@@ -116,9 +120,22 @@ export function fetchSheetViaGViz(sheetId: string): Promise<DeliveryItem[]> {
       }
     };
 
+    // Register callback for responseHandler
+    (window as any)[callbackName] = handleGvizResponse;
+
+    // Safety: also define google.visualization.Query.setResponse in case Google uses default handler
+    try {
+      (window as any).google = (window as any).google || {};
+      (window as any).google.visualization = (window as any).google.visualization || {};
+      (window as any).google.visualization.Query = (window as any).google.visualization.Query || {};
+      (window as any).google.visualization.Query.setResponse = handleGvizResponse;
+    } catch {
+      // ignore
+    }
+
     script.onerror = () => {
       cleanup();
-      reject(new Error('No se pudo cargar la hoja de Google Sheets. Verifique los permisos de acceso compartido.'));
+      reject(new Error('Error de red al cargar GViz script de Google Sheets.'));
     };
 
     document.head.appendChild(script);
@@ -126,29 +143,83 @@ export function fetchSheetViaGViz(sheetId: string): Promise<DeliveryItem[]> {
 }
 
 /**
- * Universal Sheet Loader: supports GViz JSONP, CSV URLs, or PapaParse fallback
+ * Strategy 1: Fetch via Local / Vercel Server Proxy (/api/sheets-proxy)
+ */
+async function fetchViaServerProxy(sheetId: string): Promise<DeliveryItem[]> {
+  const url = `/api/sheets-proxy?sheetId=${encodeURIComponent(sheetId)}`;
+  const resp = await fetch(url);
+  if (!resp.ok) {
+    throw new Error(`Proxy error HTTP ${resp.status}`);
+  }
+  const csvText = await resp.text();
+  if (!csvText || !csvText.trim()) {
+    return [];
+  }
+  const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true });
+  if (!parsed.data || parsed.data.length === 0) {
+    return [];
+  }
+  return parseCSVRowsToDeliveries(parsed.data as Record<string, any>[]);
+}
+
+/**
+ * Strategy 3: Fetch via public CORS proxy fallback
+ */
+async function fetchViaCorsProxy(csvUrl: string): Promise<DeliveryItem[]> {
+  const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(csvUrl)}`;
+  const resp = await fetch(proxyUrl);
+  if (!resp.ok) {
+    throw new Error(`CORS proxy HTTP ${resp.status}`);
+  }
+  const csvText = await resp.text();
+  const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true });
+  return parseCSVRowsToDeliveries(parsed.data as Record<string, any>[]);
+}
+
+/**
+ * Universal Sheet Loader: multi-tier resilient loading architecture:
+ * 1. Server Proxy (/api/sheets-proxy) -> 100% reliable in local dev server and Vercel!
+ * 2. GViz JSONP (with dual callback support) -> reliable in browser without server!
+ * 3. Public CORS proxy -> fallback if in standalone browser and GViz is ad-blocked!
+ * 4. PapaParse direct download -> final fallback
  */
 export async function loadGoogleSheetDeliveries(sheetUrlOrId: string): Promise<{ items: DeliveryItem[]; source: string }> {
-  const sheetId = extractSpreadsheetId(sheetUrlOrId);
+  const sheetId = extractSpreadsheetId(sheetUrlOrId) || DEFAULT_SHEET_ID;
+  const csvExportUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv`;
 
-  // If we have a valid sheet ID, use GViz JSONP directly (100% reliable in browser with zero CORS)
-  if (sheetId) {
-    try {
-      const items = await fetchSheetViaGViz(sheetId);
-      return { items, source: `Google Sheets (ID: ${sheetId.slice(0, 10)}...)` };
-    } catch (gvizError: any) {
-      console.warn('GViz JSONP fallo, intentando CSV:', gvizError);
+  // 1. First Priority: Server Proxy (Vite dev server + Vercel serverless)
+  try {
+    const items = await fetchViaServerProxy(sheetId);
+    if (items && items.length > 0) {
+      return { items, source: `Google Sheets en Vivo (Servidor Proxy)` };
     }
+  } catch (proxyErr) {
+    console.warn('[loadGoogleSheetDeliveries] Server proxy attempt failed, falling back to GViz:', proxyErr);
   }
 
-  // Fallback: direct CSV download with PapaParse
-  let csvUrl = sheetUrlOrId.trim();
-  if (sheetId && !csvUrl.includes('/pub?') && !csvUrl.includes('output=csv')) {
-    csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv`;
+  // 2. Second Priority: GViz JSONP (bypasses CORS in pure browser)
+  try {
+    const items = await fetchSheetViaGViz(sheetId);
+    if (items && items.length > 0) {
+      return { items, source: `Google Sheets (GViz JSONP)` };
+    }
+  } catch (gvizError: any) {
+    console.warn('[loadGoogleSheetDeliveries] GViz JSONP failed, trying CORS proxy:', gvizError);
   }
 
+  // 3. Third Priority: Public CORS Proxy
+  try {
+    const items = await fetchViaCorsProxy(csvExportUrl);
+    if (items && items.length > 0) {
+      return { items, source: `Google Sheets (CORS Proxy)` };
+    }
+  } catch (corsErr) {
+    console.warn('[loadGoogleSheetDeliveries] CORS proxy failed, trying direct CSV download:', corsErr);
+  }
+
+  // 4. Final Fallback: Direct PapaParse download
   return new Promise((resolve, reject) => {
-    Papa.parse(csvUrl, {
+    Papa.parse(csvExportUrl, {
       download: true,
       header: true,
       skipEmptyLines: true,
@@ -158,10 +229,10 @@ export async function loadGoogleSheetDeliveries(sheetUrlOrId: string): Promise<{
           return;
         }
         const parsed = parseCSVRowsToDeliveries(results.data as Record<string, any>[]);
-        resolve({ items: parsed, source: 'CSV publicado' });
+        resolve({ items: parsed, source: 'CSV Directo' });
       },
       error: (err) => {
-        reject(new Error(`Error al leer CSV: ${err.message}`));
+        reject(new Error(`Error al leer hoja de Google Sheets: ${err.message}`));
       }
     });
   });

@@ -41,6 +41,7 @@ export const WhatsAppModal: React.FC<WhatsAppModalProps> = ({
   const [includeBases, setIncludeBases] = useState(true);
   const [includeDetails, setIncludeDetails] = useState(true);
   const [includeFarmacias, setIncludeFarmacias] = useState(true);
+  const [includeProvincias, setIncludeProvincias] = useState(true);
   const [includeFooter, setIncludeFooter] = useState(true);
   const [copied, setCopied] = useState(false);
 
@@ -124,7 +125,32 @@ export const WhatsAppModal: React.FC<WhatsAppModalProps> = ({
       lines.push('──────────────────────');
     }
 
-    // 4. Breakdown by Farmacias & Pedidos por Sede
+    // 4. Breakdown by Provinces (Conteo de Pedidos por Provincia)
+    if (includeProvincias) {
+      lines.push('📍 *CONSOLIDADO DE PEDIDOS POR PROVINCIA*');
+      const provMap = new Map<string, { pedidos: number; bultos: number; entregados: number; pendientes: number; farmacias: string[] }>();
+      deliveries.forEach(d => {
+        const prov = (d.provincia || 'Otras').trim();
+        const cur = provMap.get(prov) || { pedidos: 0, bultos: 0, entregados: 0, pendientes: 0, farmacias: [] };
+        cur.pedidos += 1;
+        cur.bultos += Number(d.bultos) || 0;
+        if (d.estado.toLowerCase().includes('entregad')) cur.entregados += 1;
+        else cur.pendientes += 1;
+        if (d.farmacia && !cur.farmacias.includes(d.farmacia)) cur.farmacias.push(d.farmacia);
+        provMap.set(prov, cur);
+      });
+
+      provMap.forEach((val, prov) => {
+        const efec = val.pedidos > 0 ? Math.round((val.entregados / val.pedidos) * 100) : 0;
+        lines.push(`• *${prov.toUpperCase()}*: *${val.pedidos} pedidos* | ${val.bultos} bultos | Efec: ${efec}%`);
+        if (val.farmacias.length > 0) {
+          lines.push(`  ↳ Farmacias: ${val.farmacias.slice(0, 3).join(', ')}${val.farmacias.length > 3 ? '...' : ''}`);
+        }
+      });
+      lines.push('──────────────────────');
+    }
+
+    // 5. Breakdown by Farmacias & Pedidos por Sede
     if (includeFarmacias) {
       lines.push('💊 *DETALLE DE FARMACIAS Y PEDIDOS POR SEDE*');
       
@@ -156,13 +182,13 @@ export const WhatsAppModal: React.FC<WhatsAppModalProps> = ({
       lines.push('──────────────────────');
     }
 
-    // 5. Footer Note
+    // 6. Footer Note
     if (includeFooter) {
       lines.push('📌 _Reporte emitido automáticamente desde el Sistema Gerencial de Despachos RD._');
     }
 
     return lines.join('\n');
-  }, [includeHeader, includeKpis, includeBases, includeDetails, includeFarmacias, includeFooter, deliveries, selectedDate, kpis]);
+  }, [includeHeader, includeKpis, includeBases, includeDetails, includeProvincias, includeFarmacias, includeFooter, deliveries, selectedDate, kpis]);
 
   const [isCopyingPhoto, setIsCopyingPhoto] = useState(false);
   const [photoCopied, setPhotoCopied] = useState(false);
@@ -287,6 +313,18 @@ export const WhatsAppModal: React.FC<WhatsAppModalProps> = ({
                 />
                 <span className={`text-xs font-medium ${includeBases ? 'text-slate-700' : 'text-slate-400'}`}>
                   🚚 Detalle de Choferes y Rutas
+                </span>
+              </label>
+
+              <label className="flex items-center gap-2.5 p-2 bg-white rounded-lg border border-slate-200 hover:border-slate-300 cursor-pointer transition select-none sm:col-span-2">
+                <input
+                  type="checkbox"
+                  checked={includeProvincias}
+                  onChange={(e) => setIncludeProvincias(e.target.checked)}
+                  className="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer"
+                />
+                <span className="text-xs font-medium text-slate-700">
+                  📍 Consolidado de Pedidos por Provincia (Conteo de pedidos y efectividad)
                 </span>
               </label>
 

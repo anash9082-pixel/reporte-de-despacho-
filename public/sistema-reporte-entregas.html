@@ -100,6 +100,10 @@
                 <i data-lucide="store" class="w-4 h-4 text-emerald-500"></i>
                 <span>Pestaña 2: Detalle de Farmacias y Pedidos</span>
             </button>
+            <button onclick="cambiarPestana('provincias')" id="tab-btn-provincias" class="flex-1 sm:flex-initial px-4 py-2.5 rounded-lg font-extrabold text-xs sm:text-sm inline-flex items-center justify-center gap-2 transition cursor-pointer text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                <i data-lucide="map-pin" class="w-4 h-4 text-rose-500"></i>
+                <span>Pestaña 3: Reporte Gerencial de Despacho</span>
+            </button>
         </div>
 
         <!-- ======================================================== -->
@@ -301,6 +305,143 @@
                 <!-- Contenedor dinámico de tablas por sede -->
                 <div id="contenedor-farmacias-por-sede" class="space-y-6">
                     <!-- Se inyectan las tablas de Sede Santo Domingo y Sede Santiago -->
+                </div>
+            </div>
+        </div>
+
+        <!-- ======================================================== -->
+        <!-- PESTAÑA 3: REPORTE GERENCIAL DE DESPACHO (POR PROVINCIA) -->
+        <!-- ======================================================== -->
+        <div id="vista-provincias" class="space-y-4 hidden">
+            <!-- Barra de Filtro y Controles para Provincias -->
+            <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-xs space-y-3 no-print">
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <div class="flex items-center gap-1.5 bg-slate-100 border border-slate-300 rounded-lg p-1.5 text-xs">
+                            <span class="px-2 font-bold text-slate-800 flex items-center gap-1">
+                                <i data-lucide="calendar" class="w-3.5 h-3.5 text-rose-600"></i>
+                                <span>Fecha:</span>
+                            </span>
+                            <button onclick="cambiarDia(-1)" class="px-1.5 py-0.5 hover:bg-slate-200 rounded text-slate-700 font-bold cursor-pointer">◀</button>
+                            <input type="date" id="filtro-provincias-dia" onchange="sincronizarFechaDia(this.value)" class="bg-white text-slate-900 font-mono px-2 py-0.5 rounded border border-slate-300 text-xs focus:outline-none cursor-pointer">
+                            <button onclick="cambiarDia(1)" class="px-1.5 py-0.5 hover:bg-slate-200 rounded text-slate-700 font-bold cursor-pointer">▶</button>
+                        </div>
+                        <div class="flex items-center gap-1">
+                            <button onclick="setDiaHoy()" class="px-3 py-1.5 text-xs font-bold rounded-lg border bg-rose-600 text-white border-rose-600 shadow-xs cursor-pointer">Hoy (26 Oct)</button>
+                            <button onclick="setDiaAyer()" class="px-3 py-1.5 text-xs font-semibold rounded-lg border bg-white text-slate-700 border-slate-300 hover:bg-slate-100 cursor-pointer">Ayer (25 Oct)</button>
+                            <button onclick="verTodasLasFechas()" class="px-3 py-1.5 text-xs font-semibold rounded-lg border bg-white text-slate-700 border-slate-300 hover:bg-slate-100 cursor-pointer">Ver Todas</button>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <button onclick="copiarReporteConFoto()" class="flex items-center gap-1.5 bg-blue-700 hover:bg-blue-800 text-white px-3.5 py-1.5 rounded-lg text-xs font-bold transition shadow-xs cursor-pointer">
+                            <i data-lucide="copy" class="w-3.5 h-3.5 text-blue-200"></i>
+                            <span>📋 Copiar con Foto</span>
+                        </button>
+                        <button onclick="capturarReportePng()" class="flex items-center gap-1.5 bg-rose-600 hover:bg-rose-700 text-white px-3.5 py-1.5 rounded-lg text-xs font-bold transition shadow-xs cursor-pointer">
+                            <i data-lucide="camera" class="w-3.5 h-3.5 text-rose-100"></i>
+                            <span>📷 Capturar PNG</span>
+                        </button>
+                        <button onclick="abrirModalWhatsApp()" class="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-1.5 rounded-lg text-xs font-bold transition shadow-xs cursor-pointer">
+                            <i data-lucide="message-square" class="w-3.5 h-3.5 text-emerald-100"></i>
+                            <span>💬 WhatsApp Provincias</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Botones de Provincias -->
+                <div class="flex flex-col gap-1.5 pt-2 border-t border-slate-100">
+                    <div class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                        <i data-lucide="map-pin" class="w-3.5 h-3.5 text-rose-600"></i>
+                        <span>Filtrar por Provincia:</span>
+                    </div>
+                    <div id="contenedor-botones-provincias" class="flex items-center gap-1.5 flex-wrap">
+                        <!-- Botones dinámicos de provincias -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Área Capturable del Reporte Gerencial por Provincias -->
+            <div id="area-captura-provincias" class="space-y-4 bg-slate-100 p-2 rounded-xl">
+                <!-- Cabecera Corporativa -->
+                <div class="bg-slate-950 text-white px-6 py-4 rounded-xl shadow-xs border-b-2 border-slate-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-rose-600 flex items-center justify-center text-white shrink-0">
+                            <i data-lucide="map-pin" class="w-5 h-5 text-rose-100"></i>
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <h2 class="text-base sm:text-lg font-black tracking-tight uppercase">REPORTE GERENCIAL DE DESPACHOS POR PROVINCIA</h2>
+                                <span class="bg-rose-900 text-rose-200 text-[10px] font-bold px-2 py-0.5 rounded border border-rose-700">CONSOLIDADO TERRITORIAL</span>
+                            </div>
+                            <p class="text-xs text-slate-400 mt-0.5" id="label-fecha-provincias">Fecha Operativa: 2026-10-26</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span id="kpi-prov-pedidos-badge" class="bg-blue-600 text-white font-mono text-xs font-black px-3 py-1 rounded-lg">0 Pedidos</span>
+                    </div>
+                </div>
+
+                <!-- KPIs Superiores de Provincias -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
+                        <div class="text-[11px] font-bold text-slate-500 uppercase">Provincias Activas</div>
+                        <div class="text-2xl font-extrabold text-slate-900 mt-1" id="kpi-prov-total-provincias">0</div>
+                    </div>
+                    <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
+                        <div class="text-[11px] font-bold text-slate-500 uppercase">Cantidad de Pedidos</div>
+                        <div class="text-2xl font-extrabold text-blue-600 mt-1" id="kpi-prov-total-pedidos">0</div>
+                    </div>
+                    <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
+                        <div class="text-[11px] font-bold text-slate-500 uppercase">Total Bultos</div>
+                        <div class="text-2xl font-extrabold text-slate-900 mt-1" id="kpi-prov-total-bultos">0</div>
+                    </div>
+                    <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
+                        <div class="text-[11px] font-bold text-slate-500 uppercase">Efectividad General</div>
+                        <div class="text-2xl font-extrabold text-emerald-600 mt-1" id="kpi-prov-efectividad">0%</div>
+                    </div>
+                </div>
+
+                <!-- Tabla Resumen Ejecutivo por Provincia -->
+                <div class="bg-white rounded-xl border border-slate-300 shadow-xs overflow-hidden">
+                    <div class="bg-slate-900 text-white px-4 py-3 flex items-center justify-between">
+                        <span class="font-bold text-xs uppercase">Tabla Maestra de Pedidos por Provincia</span>
+                        <span class="text-xs text-slate-300 font-mono" id="tabla-prov-info">0 Provincias</span>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs border-collapse">
+                            <thead>
+                                <tr class="bg-slate-100 text-slate-700 font-bold border-b border-slate-300">
+                                    <th class="py-2.5 px-3">#</th>
+                                    <th class="py-2.5 px-3">Provincia / Destino</th>
+                                    <th class="py-2.5 px-3 text-center bg-blue-50 text-blue-900 font-extrabold">Cantidad de Pedidos</th>
+                                    <th class="py-2.5 px-3 text-center">Bultos</th>
+                                    <th class="py-2.5 px-3 text-center text-emerald-800">Entregados</th>
+                                    <th class="py-2.5 px-3 text-center text-amber-800">Pendientes</th>
+                                    <th class="py-2.5 px-3 text-center">Efectividad</th>
+                                    <th class="py-2.5 px-3">Farmacias / Pedidos</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabla-provincias-cuerpo" class="divide-y divide-slate-200">
+                            </tbody>
+                            <tfoot>
+                                <tr class="bg-slate-900 text-white font-extrabold border-t-2 border-blue-500">
+                                    <td class="py-3 px-3"></td>
+                                    <td class="py-3 px-3 uppercase text-xs font-black">TOTAL GENERAL</td>
+                                    <td class="py-3 px-3 text-center bg-blue-700 text-white font-mono text-sm" id="pie-prov-pedidos">0 Pedidos</td>
+                                    <td class="py-3 px-3 text-center font-mono text-sm" id="pie-prov-bultos">0</td>
+                                    <td class="py-3 px-3 text-center font-mono text-sm text-emerald-300" id="pie-prov-entregados">0</td>
+                                    <td class="py-3 px-3 text-center font-mono text-sm text-amber-300" id="pie-prov-pendientes">0</td>
+                                    <td class="py-3 px-3 text-center font-mono text-sm" id="pie-prov-efectividad">0%</td>
+                                    <td class="py-3 px-3 text-right text-xs text-slate-300 font-normal">Consolidado Nacional</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Desglose de Pedidos por Provincia -->
+                <div id="contenedor-desglose-provincias" class="space-y-4">
                 </div>
             </div>
         </div>
@@ -569,23 +710,38 @@
             return s;
         }
 
+        let FILTRO_PROVINCIA_ACTIVA = 'all';
+
+        function filtrarProvincia(prov) {
+            FILTRO_PROVINCIA_ACTIVA = (FILTRO_PROVINCIA_ACTIVA === prov) ? 'all' : prov;
+            actualizarReporte();
+        }
+
         function cambiarPestana(pestana) {
             PESTANA_ACTIVA = pestana;
             const btnConsolidado = document.getElementById('tab-btn-consolidado');
             const btnFarmacias = document.getElementById('tab-btn-farmacias');
+            const btnProvincias = document.getElementById('tab-btn-provincias');
             const vistaConsolidado = document.getElementById('vista-consolidado');
             const vistaFarmacias = document.getElementById('vista-farmacias');
+            const vistaProvincias = document.getElementById('vista-provincias');
+
+            [btnConsolidado, btnFarmacias, btnProvincias].forEach(b => {
+                if (b) b.className = "flex-1 sm:flex-initial px-4 py-2.5 rounded-lg font-extrabold text-xs sm:text-sm inline-flex items-center justify-center gap-2 transition cursor-pointer text-slate-600 hover:text-slate-900 hover:bg-slate-100";
+            });
+            [vistaConsolidado, vistaFarmacias, vistaProvincias].forEach(v => {
+                if (v) v.classList.add('hidden');
+            });
 
             if (pestana === 'consolidado') {
-                btnConsolidado.className = "flex-1 sm:flex-initial px-4 py-2.5 rounded-lg font-extrabold text-xs sm:text-sm inline-flex items-center justify-center gap-2 transition cursor-pointer bg-slate-900 text-white shadow-xs";
-                btnFarmacias.className = "flex-1 sm:flex-initial px-4 py-2.5 rounded-lg font-extrabold text-xs sm:text-sm inline-flex items-center justify-center gap-2 transition cursor-pointer text-slate-600 hover:text-slate-900 hover:bg-slate-100";
-                vistaConsolidado.classList.remove('hidden');
-                vistaFarmacias.classList.add('hidden');
-            } else {
-                btnFarmacias.className = "flex-1 sm:flex-initial px-4 py-2.5 rounded-lg font-extrabold text-xs sm:text-sm inline-flex items-center justify-center gap-2 transition cursor-pointer bg-slate-900 text-white shadow-xs";
-                btnConsolidado.className = "flex-1 sm:flex-initial px-4 py-2.5 rounded-lg font-extrabold text-xs sm:text-sm inline-flex items-center justify-center gap-2 transition cursor-pointer text-slate-600 hover:text-slate-900 hover:bg-slate-100";
-                vistaFarmacias.classList.remove('hidden');
-                vistaConsolidado.classList.add('hidden');
+                if (btnConsolidado) btnConsolidado.className = "flex-1 sm:flex-initial px-4 py-2.5 rounded-lg font-extrabold text-xs sm:text-sm inline-flex items-center justify-center gap-2 transition cursor-pointer bg-slate-900 text-white shadow-xs";
+                if (vistaConsolidado) vistaConsolidado.classList.remove('hidden');
+            } else if (pestana === 'farmacias') {
+                if (btnFarmacias) btnFarmacias.className = "flex-1 sm:flex-initial px-4 py-2.5 rounded-lg font-extrabold text-xs sm:text-sm inline-flex items-center justify-center gap-2 transition cursor-pointer bg-slate-900 text-white shadow-xs";
+                if (vistaFarmacias) vistaFarmacias.classList.remove('hidden');
+            } else if (pestana === 'provincias') {
+                if (btnProvincias) btnProvincias.className = "flex-1 sm:flex-initial px-4 py-2.5 rounded-lg font-extrabold text-xs sm:text-sm inline-flex items-center justify-center gap-2 transition cursor-pointer bg-rose-700 text-white shadow-xs";
+                if (vistaProvincias) vistaProvincias.classList.remove('hidden');
             }
             lucide.createIcons();
             actualizarReporte();
@@ -608,7 +764,7 @@
             actualizarReporte();
         }
 
-        let FECHA_SELECCIONADA = "2026-10-25";
+        let FECHA_SELECCIONADA = new Date().toISOString().slice(0, 10);
 
         function sincronizarFechaDia(nuevaFecha) {
             FECHA_SELECCIONADA = nuevaFecha || '';
@@ -620,8 +776,9 @@
         }
 
         function cambiarDia(delta) {
+            const hoy = new Date().toISOString().slice(0, 10);
             if (!FECHA_SELECCIONADA) {
-                FECHA_SELECCIONADA = "2026-10-25";
+                FECHA_SELECCIONADA = hoy;
             } else {
                 try {
                     const parts = FECHA_SELECCIONADA.split('-');
@@ -634,18 +791,20 @@
                         FECHA_SELECCIONADA = `${y}-${m}-${dia}`;
                     }
                 } catch (e) {
-                    FECHA_SELECCIONADA = "2026-10-25";
+                    FECHA_SELECCIONADA = hoy;
                 }
             }
             sincronizarFechaDia(FECHA_SELECCIONADA);
         }
 
         function setDiaHoy() {
-            sincronizarFechaDia("2026-10-25");
+            sincronizarFechaDia(new Date().toISOString().slice(0, 10));
         }
 
         function setDiaAyer() {
-            sincronizarFechaDia("2026-10-24");
+            const d = new Date();
+            d.setDate(d.getDate() - 1);
+            sincronizarFechaDia(d.toISOString().slice(0, 10));
         }
 
         function verTodasLasFechas() {
@@ -702,8 +861,10 @@
 
             if (PESTANA_ACTIVA === 'consolidado') {
                 renderizarTablaConsolidada(filasFiltradas);
-            } else {
+            } else if (PESTANA_ACTIVA === 'farmacias') {
                 renderizarTabFarmacias(filasFiltradas);
+            } else if (PESTANA_ACTIVA === 'provincias') {
+                renderizarTabProvincias(filasFiltradas);
             }
 
             actualizarTextoWhatsApp();
@@ -996,6 +1157,184 @@
                     </div>
                 `;
                 container.appendChild(wrapper);
+            });
+        }
+
+        // Renderizado de Pestaña 3: Reporte Gerencial de Despacho (Agrupado por Provincia)
+        function renderizarTabProvincias(filas) {
+            const tbody = document.getElementById('tabla-provincias-cuerpo');
+            const contenedorDesglose = document.getElementById('contenedor-desglose-provincias');
+            const contenedorBotones = document.getElementById('contenedor-botones-provincias');
+            if (!tbody || !contenedorDesglose) return;
+
+            tbody.innerHTML = '';
+            contenedorDesglose.innerHTML = '';
+
+            // 1. Agrupar pedidos por provincia
+            const mapProvincias = new Map();
+            filas.forEach(item => {
+                const prov = (item.provincia || 'Otras').trim();
+                const cur = mapProvincias.get(prov) || [];
+                cur.push(item);
+                mapProvincias.set(prov, cur);
+            });
+
+            // Generar botones de filtro rápido de provincias
+            if (contenedorBotones) {
+                let btnsHtml = `
+                    <button onclick="filtrarProvincia('all')" class="px-2.5 py-1 text-xs font-bold rounded-lg border transition cursor-pointer ${
+                        FILTRO_PROVINCIA_ACTIVA === 'all'
+                            ? 'bg-rose-600 text-white border-rose-600 shadow-xs'
+                            : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
+                    }">Todas (${filas.length} Pedidos)</button>
+                `;
+
+                mapProvincias.forEach((items, prov) => {
+                    const isSel = FILTRO_PROVINCIA_ACTIVA.toLowerCase() === prov.toLowerCase();
+                    btnsHtml += `
+                        <button onclick="filtrarProvincia('${prov}')" class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-lg border transition cursor-pointer ${
+                            isSel
+                                ? 'bg-rose-600 text-white border-rose-600 shadow-xs font-bold'
+                                : 'bg-white text-slate-700 border-slate-300 hover:bg-rose-50'
+                        }">
+                            <span>${prov}</span>
+                            <span class="px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold ${
+                                isSel ? 'bg-rose-800 text-rose-100' : 'bg-slate-100 text-slate-700'
+                            }">${items.length}</span>
+                        </button>
+                    `;
+                });
+                contenedorBotones.innerHTML = btnsHtml;
+            }
+
+            let totalProvincias = mapProvincias.size;
+            let totalPedidos = filas.length;
+            let totalBultos = filas.reduce((acc, f) => acc + (parseInt(f.bultos, 10) || 0), 0);
+            let totalEntregados = filas.filter(f => (f.estado || '').toLowerCase().includes('entregad')).length;
+            let totalPendientes = totalPedidos - totalEntregados;
+            let efectividadGlobal = totalPedidos > 0 ? Math.round((totalEntregados / totalPedidos) * 100) : 0;
+
+            // Actualizar KPIs de Provincias
+            const elTotalProv = document.getElementById('kpi-prov-total-provincias');
+            if (elTotalProv) elTotalProv.textContent = totalProvincias;
+            const elTotalPed = document.getElementById('kpi-prov-total-pedidos');
+            if (elTotalPed) elTotalPed.textContent = totalPedidos;
+            const elTotalBult = document.getElementById('kpi-prov-total-bultos');
+            if (elTotalBult) elTotalBult.textContent = totalBultos;
+            const elEfec = document.getElementById('kpi-prov-efectividad');
+            if (elEfec) elEfec.textContent = `${efectividadGlobal}%`;
+            const badgePed = document.getElementById('kpi-prov-pedidos-badge');
+            if (badgePed) badgePed.textContent = `${totalPedidos} Pedidos`;
+
+            const infoTabla = document.getElementById('tabla-prov-info');
+            if (infoTabla) infoTabla.textContent = `${totalProvincias} Provincias | ${totalPedidos} Pedidos`;
+
+            // Pie de tabla
+            const piePed = document.getElementById('pie-prov-pedidos');
+            if (piePed) piePed.textContent = `${totalPedidos} Pedidos`;
+            const pieBult = document.getElementById('pie-prov-bultos');
+            if (pieBult) pieBult.textContent = totalBultos;
+            const pieEnt = document.getElementById('pie-prov-entregados');
+            if (pieEnt) pieEnt.textContent = totalEntregados;
+            const piePend = document.getElementById('pie-prov-pendientes');
+            if (piePend) piePend.textContent = totalPendientes;
+            const pieEfec = document.getElementById('pie-prov-efectividad');
+            if (pieEfec) pieEfec.textContent = `${efectividadGlobal}%`;
+
+            if (totalProvincias === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" class="py-8 text-center text-slate-400 italic">No hay despachos para esta fecha o provincia.</td></tr>`;
+                return;
+            }
+
+            // Ordenar provincias por mayor cantidad de pedidos
+            const sortedProvincias = Array.from(mapProvincias.entries()).sort((a, b) => b[1].length - a[1].length);
+
+            sortedProvincias.forEach(([prov, items], index) => {
+                const bultosProv = items.reduce((acc, f) => acc + (parseInt(f.bultos, 10) || 0), 0);
+                const entProv = items.filter(f => (f.estado || '').toLowerCase().includes('entregad')).length;
+                const pendProv = items.length - entProv;
+                const efecProv = items.length > 0 ? Math.round((entProv / items.length) * 100) : 0;
+
+                const farmacias = Array.from(new Set(items.map(i => i.farmacia).filter(Boolean)));
+                const pedidos = Array.from(new Set(items.map(i => i.numeroPedido).filter(Boolean)));
+
+                // Fila en tabla resumen
+                const tr = document.createElement('tr');
+                tr.className = index % 2 === 0 ? 'bg-white' : 'bg-slate-50/50';
+                tr.innerHTML = `
+                    <td class="py-2.5 px-3 font-mono font-bold text-slate-400">${index + 1}</td>
+                    <td class="py-2.5 px-3 font-extrabold text-slate-900">${prov}</td>
+                    <td class="py-2.5 px-3 text-center bg-blue-50/80">
+                        <span class="inline-block px-2.5 py-0.5 bg-blue-600 text-white font-mono font-black rounded-md text-xs">
+                            ${items.length} ${items.length === 1 ? 'pedido' : 'pedidos'}
+                        </span>
+                    </td>
+                    <td class="py-2.5 px-3 text-center font-mono font-bold text-slate-800">${bultosProv}</td>
+                    <td class="py-2.5 px-3 text-center font-mono font-bold text-emerald-700">${entProv}</td>
+                    <td class="py-2.5 px-3 text-center font-mono font-bold text-amber-700">${pendProv}</td>
+                    <td class="py-2.5 px-3 text-center font-mono font-bold text-slate-800">${efecProv}%</td>
+                    <td class="py-2.5 px-3 text-slate-700">
+                        <div class="truncate max-w-[200px]" title="${farmacias.join(', ')}">${farmacias.length > 0 ? farmacias.join(', ') : 'N/A'}</div>
+                        ${pedidos.length > 0 ? `<div class="text-[10px] text-slate-400 font-mono">Peds: ${pedidos.join(', ')}</div>` : ''}
+                    </td>
+                `;
+                tbody.appendChild(tr);
+
+                // Tarjeta de desglose detallado
+                const card = document.createElement('div');
+                card.className = "bg-white rounded-xl border border-slate-300 shadow-xs overflow-hidden";
+
+                let innerRows = '';
+                items.forEach((item, idx) => {
+                    const isDel = (item.estado || '').toLowerCase().includes('entregad');
+                    innerRows += `
+                        <tr class="hover:bg-slate-50">
+                            <td class="py-2 px-3 font-mono font-bold text-blue-700 bg-blue-50/60 rounded">#${item.numeroPedido || (idx + 1)}</td>
+                            <td class="py-2 px-3 font-bold text-slate-900">${item.farmacia || 'No especificada'}</td>
+                            <td class="py-2 px-3">${item.unidad || 'N/A'}</td>
+                            <td class="py-2 px-3">${item.chofer || 'N/A'}</td>
+                            <td class="py-2 px-3 text-center font-mono font-bold">${item.bultos || 1}</td>
+                            <td class="py-2 px-3 text-center">
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${isDel ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">
+                                    ${isDel ? 'Entregado' : 'Pendiente'}
+                                </span>
+                            </td>
+                            <td class="py-2 px-3 text-slate-500 text-[11px]">${item.observacion || 'Sin novedad'}</td>
+                        </tr>
+                    `;
+                });
+
+                card.innerHTML = `
+                    <div class="bg-slate-950 text-white p-3 flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="map-pin" class="w-4 h-4 text-rose-500"></i>
+                            <span class="font-extrabold uppercase text-sm">${prov}</span>
+                            <span class="bg-blue-600 text-white text-xs font-mono font-bold px-2 py-0.5 rounded">${items.length} Pedidos</span>
+                        </div>
+                        <div class="text-xs text-slate-400 font-mono">
+                            ${bultosProv} bultos · ${efecProv}% efectividad
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs">
+                            <thead>
+                                <tr class="bg-slate-100 text-slate-700 font-bold border-b text-[11px]">
+                                    <th class="py-2 px-3">Pedido</th>
+                                    <th class="py-2 px-3">Farmacia</th>
+                                    <th class="py-2 px-3">Unidad</th>
+                                    <th class="py-2 px-3">Chofer</th>
+                                    <th class="py-2 px-3 text-center">Bultos</th>
+                                    <th class="py-2 px-3 text-center">Estado</th>
+                                    <th class="py-2 px-3">Observación</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                ${innerRows}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+                contenedorDesglose.appendChild(card);
             });
         }
 
@@ -1391,7 +1730,22 @@
                     return '';
                 };
 
-                const fecha = findVal('fecha', 'date', 'dia') || '2026-10-25';
+                let fecha = findVal('fecha', 'date', 'dia');
+                if (!fecha) {
+                    if (fila[''] !== undefined && String(fila['']).trim()) {
+                        fecha = String(fila['']).trim();
+                    } else {
+                        const firstKey = Object.keys(fila)[0];
+                        if (firstKey !== undefined && fila[firstKey] !== undefined) {
+                            const firstVal = String(fila[firstKey]).trim();
+                            if (/^\d{1,4}[-/]\d{1,2}[-/]\d{1,4}/.test(firstVal)) {
+                                fecha = firstVal;
+                            }
+                        }
+                    }
+                }
+                const hoyStr = new Date().toISOString().slice(0, 10);
+                fecha = fecha || hoyStr;
                 const origen = findVal('origen', 'base', 'sede', 'bloque') || 'santo domingo';
                 const unidad = findVal('unidad', 'vehiculo', 'vehículo', 'ficha') || 'Unidad';
                 const chofer = findVal('chofer', 'conductor') || 'Por asignar';
@@ -1423,7 +1777,14 @@
 
             if (nuevosDespachos.length > 0) {
                 TODOS_LOS_DESPACHOS = nuevosDespachos;
-                actualizarReporte();
+                const hoy = new Date().toISOString().slice(0, 10);
+                const fechasDisponibles = Array.from(new Set(nuevosDespachos.map(d => d.fecha).filter(Boolean)));
+                if (fechasDisponibles.includes(hoy)) {
+                    FECHA_SELECCIONADA = hoy;
+                } else if (fechasDisponibles.length > 0 && (!FECHA_SELECCIONADA || !fechasDisponibles.includes(FECHA_SELECCIONADA))) {
+                    FECHA_SELECCIONADA = fechasDisponibles.sort().reverse()[0];
+                }
+                sincronizarFechaDia(FECHA_SELECCIONADA);
             }
         }
 
@@ -1545,8 +1906,8 @@
 
         // Inicialización al cargar la página
         window.addEventListener('DOMContentLoaded', () => {
-            // Establecer fecha por defecto (2026-10-25)
-            const hoy = "2026-10-25";
+            // Establecer fecha por defecto (2026-10-26)
+            const hoy = "2026-10-26";
             FECHA_SELECCIONADA = hoy;
             ['filtro-fecha-dia', 'filtro-consolidado-dia', 'filtro-farmacia-dia'].forEach(id => {
                 const el = document.getElementById(id);
