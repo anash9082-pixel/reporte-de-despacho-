@@ -30,6 +30,66 @@ function downloadDataUrl(dataUrl: string, fileName: string) {
 }
 
 /**
+ * Temporarily expands any scrollable containers (overflow-x-auto) so that
+ * all columns from left to right are rendered completely with zero truncation.
+ */
+function prepareFullWidthElement(element: HTMLElement) {
+  const scrollContainers = Array.from(element.querySelectorAll<HTMLElement>('.overflow-x-auto, [class*="overflow-x"]'));
+  const tables = Array.from(element.querySelectorAll<HTMLElement>('table'));
+
+  // Calculate true maximum content width
+  let maxContentWidth = element.scrollWidth;
+  tables.forEach(t => {
+    if (t.scrollWidth > maxContentWidth) maxContentWidth = t.scrollWidth;
+    if (t.offsetWidth > maxContentWidth) maxContentWidth = t.offsetWidth;
+  });
+  scrollContainers.forEach(c => {
+    if (c.scrollWidth > maxContentWidth) maxContentWidth = c.scrollWidth;
+  });
+
+  const fullWidth = Math.max(maxContentWidth, element.offsetWidth, 1200);
+
+  const cleanupFns: (() => void)[] = [];
+
+  const prevElementWidth = element.style.width;
+  const prevElementMaxWidth = element.style.maxWidth;
+  const prevElementOverflow = element.style.overflow;
+
+  element.style.width = `${fullWidth}px`;
+  element.style.maxWidth = 'none';
+  element.style.overflow = 'visible';
+
+  cleanupFns.push(() => {
+    element.style.width = prevElementWidth;
+    element.style.maxWidth = prevElementMaxWidth;
+    element.style.overflow = prevElementOverflow;
+  });
+
+  scrollContainers.forEach(container => {
+    const prevOverflow = container.style.overflow;
+    const prevWidth = container.style.width;
+    const prevMaxWidth = container.style.maxWidth;
+
+    container.style.overflow = 'visible';
+    container.style.width = '100%';
+    container.style.maxWidth = 'none';
+
+    cleanupFns.push(() => {
+      container.style.overflow = prevOverflow;
+      container.style.width = prevWidth;
+      container.style.maxWidth = prevMaxWidth;
+    });
+  });
+
+  return {
+    fullWidth,
+    restore: () => {
+      cleanupFns.reverse().forEach(fn => fn());
+    }
+  };
+}
+
+/**
  * Ultra-resilient direct SVG ForeignObject canvas rendering
  */
 async function directSvgCanvasRender(
@@ -37,13 +97,19 @@ async function directSvgCanvasRender(
   fileName: string,
   filterNodeFn: (node: Node) => boolean
 ): Promise<boolean> {
-  const rect = element.getBoundingClientRect();
-  const width = Math.ceil(rect.width || element.scrollWidth || 1200);
-  const height = Math.ceil(rect.height || element.scrollHeight || 800);
-
   const clone = element.cloneNode(true) as HTMLElement;
   const noCaptureEls = clone.querySelectorAll('.no-capture, .no-print');
   noCaptureEls.forEach((el) => el.remove());
+
+  // Expand table containers in the clone so nothing is cropped
+  clone.querySelectorAll<HTMLElement>('.overflow-x-auto, [class*="overflow-x"]').forEach(el => {
+    el.style.overflow = 'visible';
+    el.style.width = '100%';
+    el.style.maxWidth = 'none';
+  });
+
+  const width = Math.max(clone.scrollWidth || element.scrollWidth || 1200, 1200);
+  const height = Math.ceil(element.scrollHeight || 800);
 
   clone.style.width = `${width}px`;
   clone.style.backgroundColor = '#ffffff';
@@ -94,7 +160,7 @@ async function directSvgCanvasRender(
 }
 
 /**
- * Capture an HTML element to PNG with 100% Tailwind CSS v4 and OKLCH color compatibility.
+ * Capture an HTML element to PNG with 100% complete width (no column cut-offs).
  */
 export async function captureReportToPng(
   elementId: string = 'area-captura',
@@ -114,36 +180,49 @@ export async function captureReportToPng(
   }
 
   const fileName = customFileName || `Reporte_Despachos_${dateLabel || 'Consolidado'}.png`;
+  const expansion = prepareFullWidthElement(element);
 
   try {
     const dataUrl = await toPng(element, {
       pixelRatio: 2,
       backgroundColor: '#ffffff',
       cacheBust: true,
+      width: expansion.fullWidth,
       filter: filterNode as any,
       style: {
         margin: '0',
-        transform: 'none'
+        transform: 'none',
+        width: `${expansion.fullWidth}px`,
+        maxWidth: 'none',
+        overflow: 'visible'
       }
     });
 
     downloadDataUrl(dataUrl, fileName);
     return true;
   } catch (primaryError) {
-    console.warn('[captureHelper] Primary capture attempt issue, trying fallback:', primaryError);
+    console.warn('[captureHelper] Primary capture issue, trying fallback with skipFonts:', primaryError);
 
     try {
       const dataUrl = await toPng(element, {
         pixelRatio: 2,
         backgroundColor: '#ffffff',
         skipFonts: true,
-        filter: filterNode as any
+        width: expansion.fullWidth,
+        filter: filterNode as any,
+        style: {
+          margin: '0',
+          transform: 'none',
+          width: `${expansion.fullWidth}px`,
+          maxWidth: 'none',
+          overflow: 'visible'
+        }
       });
 
       downloadDataUrl(dataUrl, fileName);
       return true;
     } catch (secondaryError) {
-      console.warn('[captureHelper] html-to-image fallback failed, trying direct Canvas SVG rasterization:', secondaryError);
+      console.warn('[captureHelper] Falling back to SVG direct canvas rendering:', secondaryError);
 
       try {
         const success = await directSvgCanvasRender(element, fileName, filterNode);
@@ -153,11 +232,13 @@ export async function captureReportToPng(
         return false;
       }
     }
+  } finally {
+    expansion.restore();
   }
 }
 
 /**
- * Copy the report image directly to the clipboard (allowing Ctrl+V paste into WhatsApp, Slack, Gmail, etc.)
+ * Copy the report image directly to the clipboard with 100% complete width (no column cut-offs).
  */
 export async function copyReportImageToClipboard(
   elementId: string = 'area-captura',
@@ -173,6 +254,8 @@ export async function copyReportImageToClipboard(
     return { success: false, message: 'No se encontró el cuadro para copiar.' };
   }
 
+  const expansion = prepareFullWidthElement(element);
+
   try {
     let blob: Blob | null = null;
     try {
@@ -180,14 +263,30 @@ export async function copyReportImageToClipboard(
         pixelRatio: 2,
         backgroundColor: '#ffffff',
         cacheBust: true,
-        filter: filterNode as any
+        width: expansion.fullWidth,
+        filter: filterNode as any,
+        style: {
+          margin: '0',
+          transform: 'none',
+          width: `${expansion.fullWidth}px`,
+          maxWidth: 'none',
+          overflow: 'visible'
+        }
       });
     } catch {
       blob = await toBlob(element, {
         pixelRatio: 2,
         backgroundColor: '#ffffff',
         skipFonts: true,
-        filter: filterNode as any
+        width: expansion.fullWidth,
+        filter: filterNode as any,
+        style: {
+          margin: '0',
+          transform: 'none',
+          width: `${expansion.fullWidth}px`,
+          maxWidth: 'none',
+          overflow: 'visible'
+        }
       });
     }
 
@@ -207,18 +306,16 @@ export async function copyReportImageToClipboard(
         await navigator.clipboard.write([new ClipboardItem(clipboardItems)]);
         return { 
           success: true, 
-          message: '📋 ¡Reporte y foto copiados al portapapeles! Listo para pegar con Ctrl+V en WhatsApp.' 
+          message: '📋 ¡Cuadro COMPLETO copiado al portapapeles! Listo para pegar (Ctrl+V) en tu reporte o WhatsApp.' 
         };
       } catch {
-        // Fallback with only image/png
         await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
         return { 
           success: true, 
-          message: '📋 ¡Foto del reporte copiada al portapapeles! Pégala directo con Ctrl+V en WhatsApp.' 
+          message: '📋 ¡Foto del cuadro completo copiada al portapapeles! Pégala directo con Ctrl+V.' 
         };
       }
     } else {
-      // Fallback if clipboard.write is blocked by security policy
       const downloadName = `Reporte_Despachos_${new Date().toISOString().slice(0, 10)}.png`;
       downloadDataUrl(URL.createObjectURL(blob), downloadName);
       if (summaryText && navigator.clipboard?.writeText) {
@@ -226,14 +323,16 @@ export async function copyReportImageToClipboard(
       }
       return { 
         success: true, 
-        message: '📷 Foto descargada y texto copiado. Puedes adjuntarla en WhatsApp.' 
+        message: '📷 Foto completa descargada y texto copiado. Puedes adjuntarla en tu reporte.' 
       };
     }
   } catch (err: any) {
     console.error('[captureHelper] Error copying image to clipboard:', err);
     return { 
       success: false, 
-      message: 'No se pudo copiar la foto al portapapeles. Usa el botón "Capturar Imagen".' 
+      message: 'No se pudo copiar la foto al portapapeles. Usa el botón "Capturar PNG".' 
     };
+  } finally {
+    expansion.restore();
   }
 }

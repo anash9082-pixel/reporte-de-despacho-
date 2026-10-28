@@ -164,7 +164,12 @@ export const WhatsAppModal: React.FC<WhatsAppModalProps> = ({
           const icon = isDelivered ? '✅' : '⏳';
           const farmName = d.farmacia && d.farmacia.trim() ? d.farmacia : `Cliente ${d.provincia}`;
           const orderNum = d.numeroPedido && d.numeroPedido.trim() ? ` [Ped: ${d.numeroPedido}]` : '';
-          lines.push(`  • ${icon} *${farmName}*${orderNum}: ${d.bultos} bultos (${d.unidad})`);
+          const timeInfo = [
+            d.horaFacturacion ? `Fact: ${d.horaFacturacion}` : '',
+            d.horaEntrega ? `Entr: ${d.horaEntrega}` : ''
+          ].filter(Boolean).join(' | ');
+          const timeBadge = timeInfo ? ` ⏱️ (${timeInfo})` : '';
+          lines.push(`  • ${icon} *${farmName}*${orderNum}: ${d.bultos} bultos (${d.unidad})${timeBadge}`);
         });
       }
 
@@ -175,7 +180,12 @@ export const WhatsAppModal: React.FC<WhatsAppModalProps> = ({
           const icon = isDelivered ? '✅' : '⏳';
           const farmName = d.farmacia && d.farmacia.trim() ? d.farmacia : `Cliente ${d.provincia}`;
           const orderNum = d.numeroPedido && d.numeroPedido.trim() ? ` [Ped: ${d.numeroPedido}]` : '';
-          lines.push(`  • ${icon} *${farmName}*${orderNum}: ${d.bultos} bultos (${d.unidad})`);
+          const timeInfo = [
+            d.horaFacturacion ? `Fact: ${d.horaFacturacion}` : '',
+            d.horaEntrega ? `Entr: ${d.horaEntrega}` : ''
+          ].filter(Boolean).join(' | ');
+          const timeBadge = timeInfo ? ` ⏱️ (${timeInfo})` : '';
+          lines.push(`  • ${icon} *${farmName}*${orderNum}: ${d.bultos} bultos (${d.unidad})${timeBadge}`);
         });
       }
 

@@ -15,7 +15,9 @@ import {
   Clock,
   Building2,
   Truck,
-  SlidersHorizontal
+  SlidersHorizontal,
+  Maximize2,
+  Minimize2
 } from 'lucide-react';
 
 interface MasterExecutiveTableProps {
@@ -43,6 +45,7 @@ export const MasterExecutiveTable: React.FC<MasterExecutiveTableProps> = ({
   onAddNewToBlock,
   onOpenColumnsModal
 }) => {
+  const [isFitMode, setIsFitMode] = React.useState<boolean>(true);
   const dateLabel = React.useMemo(() => {
     if (startDate && endDate) {
       if (startDate === endDate) return `Fecha: ${startDate}`;
@@ -101,6 +104,12 @@ export const MasterExecutiveTable: React.FC<MasterExecutiveTableProps> = ({
       )}
       {visibleColumns.numeroPedido && (
         <th scope="col" className="py-2.5 px-3 w-32">Nº Pedido</th>
+      )}
+      {visibleColumns.horaFacturacion && (
+        <th scope="col" className="py-2.5 px-3 w-32 text-center">Hora Facturación</th>
+      )}
+      {visibleColumns.horaEntrega && (
+        <th scope="col" className="py-2.5 px-3 w-32 text-center">Hora Entregas</th>
       )}
       {visibleColumns.observacion && (
         <th scope="col" className="py-2.5 px-3 min-w-44">Observación / Conduce</th>
@@ -165,12 +174,26 @@ export const MasterExecutiveTable: React.FC<MasterExecutiveTableProps> = ({
               <span>Personalizar Columnas</span>
             </button>
           )}
+
+          {/* Botón de Cuadro Completo 100% */}
+          <button
+            onClick={() => setIsFitMode(!isFitMode)}
+            className={`no-print text-xs px-2.5 py-1 rounded-md font-semibold inline-flex items-center gap-1.5 cursor-pointer transition-colors border ${
+              isFitMode
+                ? 'bg-blue-900/60 text-blue-200 border-blue-500/80 hover:bg-blue-800/80'
+                : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'
+            }`}
+            title="Ajustar el cuadro al 100% de la pantalla para verlo completo sin cortar columnas"
+          >
+            {isFitMode ? <Minimize2 className="w-3.5 h-3.5 text-blue-400" /> : <Maximize2 className="w-3.5 h-3.5 text-slate-400" />}
+            <span>{isFitMode ? 'Cuadro Completo (100%)' : 'Vista Expandida'}</span>
+          </button>
         </div>
       </div>
 
       {/* Tabla Maestra Dinámica con Encabezados para Cada Sede */}
-      <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse text-xs">
+      <div className={`overflow-x-auto ${isFitMode ? 'w-full' : ''}`}>
+        <table className={`w-full text-left border-collapse ${isFitMode ? 'table-auto text-[11px]' : 'text-xs'}`}>
           <tbody id="tabla-cuerpo" className="divide-y divide-slate-200">
             {ORDERED_HUB_IDS.map((hubId) => {
               const hub = HUBS_CONFIG[hubId];
@@ -309,6 +332,20 @@ export const MasterExecutiveTable: React.FC<MasterExecutiveTableProps> = ({
                           {visibleColumns.numeroPedido && (
                             <td className="py-2.5 px-3 font-mono text-[11px] text-blue-700 font-bold">
                               {item.numeroPedido || 'N/A'}
+                            </td>
+                          )}
+
+                          {/* Hora Facturación */}
+                          {visibleColumns.horaFacturacion && (
+                            <td className="py-2.5 px-3 text-center font-mono text-[11px] text-indigo-700">
+                              {item.horaFacturacion || '--:--'}
+                            </td>
+                          )}
+
+                          {/* Hora Entregas */}
+                          {visibleColumns.horaEntrega && (
+                            <td className="py-2.5 px-3 text-center font-mono text-[11px] text-emerald-800">
+                              {item.horaEntrega || (esEntregado ? (item.horaDespacho || 'Entregado') : '--:--')}
                             </td>
                           )}
 

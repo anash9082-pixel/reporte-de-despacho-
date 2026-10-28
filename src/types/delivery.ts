@@ -20,6 +20,8 @@ export interface DeliveryItem {
   observacion: string;   // Observación
   farmacia?: string;     // Farmacia / Distribuidora
   numeroPedido?: string; // Número de Pedido
+  horaFacturacion?: string; // Hora de Facturación
+  horaEntrega?: string;     // Hora de Entregas
   horaDespacho?: string; // Hora opcional
 }
 
@@ -63,6 +65,8 @@ export type ColumnKey =
   | 'provincia'
   | 'farmacia'
   | 'numeroPedido'
+  | 'horaFacturacion'
+  | 'horaEntrega'
   | 'entregados'
   | 'pendientes'
   | 'totalViajes'
@@ -87,6 +91,8 @@ export const DEFAULT_VISIBLE_COLUMNS: VisibleColumns = {
   provincia: true,
   farmacia: false,
   numeroPedido: false,
+  horaFacturacion: false,
+  horaEntrega: false,
   entregados: true,
   pendientes: true,
   totalViajes: true,
@@ -103,6 +109,8 @@ export const AVAILABLE_COLUMNS: ColumnDefinition[] = [
   { id: 'provincia', label: 'Ruta / Provincia', category: 'informacion' },
   { id: 'farmacia', label: 'Farmacia / Distribuidora', category: 'informacion' },
   { id: 'numeroPedido', label: 'Número de Pedido', category: 'informacion' },
+  { id: 'horaFacturacion', label: 'Hora de Facturación', category: 'informacion' },
+  { id: 'horaEntrega', label: 'Hora de Entregas', category: 'informacion' },
   { id: 'entregados', label: 'Entregados (1/0)', category: 'metricas' },
   { id: 'pendientes', label: 'Pendientes (1/0)', category: 'metricas' },
   { id: 'totalViajes', label: 'Total Viajes', category: 'metricas' },

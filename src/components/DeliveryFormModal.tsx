@@ -26,6 +26,10 @@ export const DeliveryFormModal: React.FC<DeliveryFormModalProps> = ({
   const [chofer, setChofer] = useState('');
   const [ayudante, setAyudante] = useState('');
   const [provincia, setProvincia] = useState('Distrito Nacional');
+  const [farmacia, setFarmacia] = useState('');
+  const [numeroPedido, setNumeroPedido] = useState('');
+  const [horaFacturacion, setHoraFacturacion] = useState('');
+  const [horaEntrega, setHoraEntrega] = useState('');
   const [estado, setEstado] = useState<DeliveryStatus>('Pendiente');
   const [bultos, setBultos] = useState<number | string>(50);
   const [observacion, setObservacion] = useState('');
@@ -39,6 +43,10 @@ export const DeliveryFormModal: React.FC<DeliveryFormModalProps> = ({
       setChofer(initialItem.chofer);
       setAyudante(initialItem.ayudante);
       setProvincia(initialItem.provincia);
+      setFarmacia(initialItem.farmacia || '');
+      setNumeroPedido(initialItem.numeroPedido || '');
+      setHoraFacturacion(initialItem.horaFacturacion || '');
+      setHoraEntrega(initialItem.horaEntrega || '');
       setEstado(initialItem.estado);
       setBultos(initialItem.bultos);
       setObservacion(initialItem.observacion);
@@ -50,6 +58,10 @@ export const DeliveryFormModal: React.FC<DeliveryFormModalProps> = ({
       const isBlanco = defaultBlockId.includes('blanco');
       setAyudante(isBlanco ? 'N/A' : '');
       setProvincia(defaultBlockId.includes('santiago') ? 'Santiago' : 'Distrito Nacional');
+      setFarmacia('');
+      setNumeroPedido('');
+      setHoraFacturacion('');
+      setHoraEntrega('');
       setEstado('Pendiente');
       setBultos(60);
       setObservacion('');
@@ -99,7 +111,11 @@ export const DeliveryFormModal: React.FC<DeliveryFormModalProps> = ({
       estado,
       bultos: Math.round(numBultos),
       observacion: observacion.trim() || 'Entrega estándar sin novedades',
-      horaDespacho: initialItem?.horaDespacho || new Date().toLocaleTimeString('es-DO', { hour: '2-digit', minute: '2-digit' })
+      farmacia: farmacia.trim(),
+      numeroPedido: numeroPedido.trim(),
+      horaFacturacion: horaFacturacion.trim(),
+      horaEntrega: horaEntrega.trim(),
+      horaDespacho: horaEntrega.trim() || initialItem?.horaDespacho || new Date().toLocaleTimeString('es-DO', { hour: '2-digit', minute: '2-digit' })
     };
 
     onSave(itemToSave);
@@ -271,6 +287,66 @@ export const DeliveryFormModal: React.FC<DeliveryFormModalProps> = ({
                 className="w-full px-3 py-2 text-sm font-mono font-bold text-slate-900 bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white transition-all"
               />
               {errors.bultos && <p className="text-xs text-red-600 mt-1">{errors.bultos}</p>}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Farmacia / Distribuidora */}
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                Farmacia / Distribuidora
+              </label>
+              <input
+                type="text"
+                value={farmacia}
+                onChange={(e) => setFarmacia(e.target.value)}
+                placeholder="Ej. Farmacia Medicar GBC"
+                className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white transition-all font-medium"
+              />
+            </div>
+
+            {/* Número de Pedido */}
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                Número de Pedido
+              </label>
+              <input
+                type="text"
+                value={numeroPedido}
+                onChange={(e) => setNumeroPedido(e.target.value)}
+                placeholder="Ej. 1874 o PED-2026-900"
+                className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white transition-all font-mono"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Hora de Facturación */}
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                Hora de Facturación
+              </label>
+              <input
+                type="text"
+                value={horaFacturacion}
+                onChange={(e) => setHoraFacturacion(e.target.value)}
+                placeholder="Ej. 08:30 AM"
+                className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white transition-all font-mono"
+              />
+            </div>
+
+            {/* Hora de Entregas */}
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                Hora de Entregas
+              </label>
+              <input
+                type="text"
+                value={horaEntrega}
+                onChange={(e) => setHoraEntrega(e.target.value)}
+                placeholder="Ej. 10:15 AM"
+                className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white transition-all font-mono"
+              />
             </div>
           </div>
 

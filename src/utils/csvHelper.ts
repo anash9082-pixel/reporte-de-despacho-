@@ -16,7 +16,9 @@ export function exportDeliveriesToCSV(deliveries: DeliveryItem[]): void {
       'Estado': item.estado,
       'Observación': item.observacion,
       'Farmacia/Distribuidora': item.farmacia || '',
-      'Numero de pedido': item.numeroPedido || ''
+      'Numero de pedido': item.numeroPedido || '',
+      'Hora de facturacion': item.horaFacturacion || '',
+      'Hora de entrega': item.horaEntrega || ''
     };
   });
 
@@ -250,6 +252,8 @@ export function parseCSVRowsToDeliveries(rows: Record<string, any>[]): DeliveryI
     const observacion = findVal('observacion', 'observación', 'notas', 'comentario') || 'Sin novedad';
     const farmacia = findVal('farmacia/distribuidora', 'farmacia / distribuidora', 'farmacia', 'distribuidora', 'cliente') || '';
     const numeroPedido = findVal('numero de pedido', 'número de pedido', 'numero pedido', 'pedido', 'no. pedido', 'orden') || '';
+    const horaFacturacion = findVal('hora de facturacion', 'hora de facturación', 'hora facturacion', 'hora facturación', 'facturacion', 'facturación', 'factura', 'hora fact') || '';
+    const horaEntrega = findVal('hora de entrega', 'hora de entregas', 'hora entrega', 'hora entregas', 'hora de despacho', 'hora entregada', 'hora') || '';
 
     // Ignore completely empty phantom rows
     if (!unidad && !chofer && !farmacia && !numeroPedido && !bultosRaw) {
@@ -285,7 +289,9 @@ export function parseCSVRowsToDeliveries(rows: Record<string, any>[]): DeliveryI
       observacion,
       farmacia,
       numeroPedido,
-      horaDespacho: new Date().toLocaleTimeString('es-DO', { hour: '2-digit', minute: '2-digit' })
+      horaFacturacion,
+      horaEntrega,
+      horaDespacho: horaEntrega || horaFacturacion || new Date().toLocaleTimeString('es-DO', { hour: '2-digit', minute: '2-digit' })
     });
   });
 

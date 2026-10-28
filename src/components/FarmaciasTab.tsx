@@ -18,7 +18,11 @@ import {
   Camera,
   Copy,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Receipt,
+  Timer,
+  Maximize2,
+  Minimize2
 } from 'lucide-react';
 import { getTodayString, getYesterdayString, formatDateLabel } from '../utils/csvHelper';
 
@@ -45,6 +49,7 @@ export const FarmaciasTab: React.FC<FarmaciasTabProps> = ({
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedHubFilter, setSelectedHubFilter] = useState<'all' | 'santodomingo' | 'santiago'>('all');
+  const [isFullFitMode, setIsFullFitMode] = useState<boolean>(true);
 
   // Filter deliveries for the farmacias tab
   const filteredList = useMemo(() => {
@@ -95,6 +100,28 @@ export const FarmaciasTab: React.FC<FarmaciasTabProps> = ({
     };
   }, [filteredList]);
 
+  const cleanTimeStr = (t?: string): string => {
+    if (!t || !t.trim()) return '';
+    let s = t.trim();
+    // Normalize "12:37 p. m." or "12:37 p.m." -> "12:37 PM"
+    s = s.replace(/\s*p\.?\s*m\.?/i, ' PM').replace(/\s*a\.?\s*m\.?/i, ' AM');
+    return s.trim();
+  };
+
+  const toTitleCase = (text?: string): string => {
+    if (!text) return '';
+    const trimmed = text.trim();
+    if (!trimmed) return '';
+    return trimmed
+      .split(/\s+/)
+      .map(w => {
+        // preserve acronyms like GBC, TB, SD, JAC
+        if (w.length <= 4 && w === w.toUpperCase() && !/^[0-9]+$/.test(w)) return w;
+        return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+      })
+      .join(' ');
+  };
+
   const renderSedeTable = (
     title: string, 
     sedeKey: 'Santo Domingo' | 'Santiago', 
@@ -142,25 +169,27 @@ export const FarmaciasTab: React.FC<FarmaciasTabProps> = ({
         </div>
 
         {/* Table Content */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
+        <div className={`overflow-x-auto ${isFullFitMode ? 'w-full' : ''}`}>
+          <table className={`w-full text-left border-collapse ${isFullFitMode ? 'table-auto text-[11px]' : 'text-xs'}`}>
             <thead>
               <tr className="bg-slate-100 text-slate-700 font-bold border-b border-slate-200 text-[11px] uppercase tracking-wider">
-                <th scope="col" className="py-2.5 px-4 w-12 text-center">#</th>
-                <th scope="col" className="py-2.5 px-3 min-w-[200px]">Farmacia / Distribuidora</th>
-                <th scope="col" className="py-2.5 px-3 w-36">Número de Pedido</th>
-                <th scope="col" className="py-2.5 px-3 text-center w-24">Bultos</th>
-                <th scope="col" className="py-2.5 px-3 w-36">Ruta / Provincia</th>
-                <th scope="col" className="py-2.5 px-3 w-44">Unidad Asignada</th>
-                <th scope="col" className="py-2.5 px-3 w-40">Chofer</th>
-                <th scope="col" className="py-2.5 px-3 text-center w-28">Estado</th>
-                <th scope="col" className="py-2.5 px-3 min-w-[180px]">Observación</th>
+                <th scope="col" className="py-2.5 px-2 w-8 text-center">#</th>
+                <th scope="col" className={`py-2.5 px-2.5 ${isFullFitMode ? 'min-w-[150px]' : 'min-w-[200px]'}`}>Farmacia / Distribuidora</th>
+                <th scope="col" className="py-2.5 px-2 text-center whitespace-nowrap">Nº Pedido</th>
+                <th scope="col" className="py-2.5 px-2 text-center whitespace-nowrap">Hora Facturación</th>
+                <th scope="col" className="py-2.5 px-2 text-center whitespace-nowrap">Hora Entregas</th>
+                <th scope="col" className="py-2.5 px-1.5 text-center whitespace-nowrap">Bultos</th>
+                <th scope="col" className="py-2.5 px-2 whitespace-nowrap">Ruta / Provincia</th>
+                <th scope="col" className="py-2.5 px-2 whitespace-nowrap">Unidad Asignada</th>
+                <th scope="col" className="py-2.5 px-2 whitespace-nowrap">Chofer</th>
+                <th scope="col" className="py-2.5 px-2 text-center whitespace-nowrap">Estado</th>
+                <th scope="col" className={`py-2.5 px-2.5 ${isFullFitMode ? 'min-w-[120px]' : 'min-w-[160px]'}`}>Observación</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 font-sans">
               {items.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="py-8 text-center text-slate-400 italic">
+                  <td colSpan={11} className="py-8 text-center text-slate-400 italic">
                     No hay despachos de farmacias registrados para esta sede en la fecha seleccionada.
                   </td>
                 </tr>
@@ -169,72 +198,104 @@ export const FarmaciasTab: React.FC<FarmaciasTabProps> = ({
                   const isDelivered = item.estado.toLowerCase().includes('entregad');
                   const serviceType = getServiceTypeFromItem(item);
                   const isTercerizado = serviceType === 'Transporte Blanco';
-                  const farmaciaDisplay = item.farmacia && item.farmacia.trim() 
+                  const rawFarmacia = item.farmacia && item.farmacia.trim() 
                     ? item.farmacia 
                     : `Cliente Ruta ${item.provincia}`;
-                  const pedidoDisplay = item.numeroPedido && item.numeroPedido.trim()
-                    ? item.numeroPedido
-                    : `PED-${String(idx + 101).padStart(4, '0')}`;
+                  const farmaciaDisplay = toTitleCase(rawFarmacia);
+                  const rawPedido = item.numeroPedido && item.numeroPedido.trim()
+                    ? item.numeroPedido.replace(/^#\s*/, '')
+                    : `${idx + 101}`;
+
+                  const facturada = cleanTimeStr(item.horaFacturacion);
+                  const entregada = cleanTimeStr(item.horaEntrega);
 
                   return (
                     <tr 
                       key={item.id} 
-                      className={`hover:bg-slate-50/80 transition-colors ${
+                      className={`hover:bg-slate-50/90 transition-colors ${
                         idx % 2 === 1 ? 'bg-slate-50/40' : 'bg-white'
                       }`}
                     >
                       {/* Num */}
-                      <td className="py-2.5 px-4 text-center font-mono text-slate-400 text-[11px]">
+                      <td className="py-2.5 px-2 text-center font-mono text-slate-400 text-xs">
                         {idx + 1}
                       </td>
 
                       {/* Farmacia / Distribuidora */}
-                      <td className="py-2.5 px-3 font-semibold text-slate-900">
+                      <td className="py-2.5 px-2.5 font-semibold text-slate-900">
                         <div className="flex items-center gap-2">
                           <div className="w-6 h-6 rounded-md bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0 border border-emerald-200">
                             <Store className="w-3.5 h-3.5" />
                           </div>
                           <div>
-                            <span className="font-bold text-slate-900 block leading-tight">
+                            <span className="font-bold text-slate-900 block leading-tight text-xs">
                               {farmaciaDisplay}
                             </span>
-                            <span className="text-[10px] text-slate-400">
-                              {item.provincia}
+                            <span className="text-[10px] text-slate-400 capitalize">
+                              {item.provincia ? item.provincia.toLowerCase() : ''}
                             </span>
                           </div>
                         </div>
                       </td>
 
                       {/* Número de Pedido */}
-                      <td className="py-2.5 px-3 font-mono">
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-50 text-blue-800 border border-blue-200 font-bold text-[11px]">
-                          <Hash className="w-3 h-3 text-blue-500" />
-                          {pedidoDisplay}
+                      <td className="py-2.5 px-2 text-center">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-50 text-blue-800 border border-blue-200 font-bold font-mono text-xs whitespace-nowrap shadow-2xs">
+                          <Hash className="w-2.5 h-2.5 text-blue-500 shrink-0" />
+                          {rawPedido}
                         </span>
                       </td>
 
+                      {/* Hora de Facturación */}
+                      <td className="py-2.5 px-2 text-center whitespace-nowrap">
+                        {facturada ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200/90 font-bold font-mono text-xs whitespace-nowrap shadow-2xs">
+                            <Receipt className="w-3 h-3 text-indigo-600 shrink-0" />
+                            {facturada}
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center justify-center font-mono text-xs text-slate-400 select-none">
+                            --:--
+                          </span>
+                        )}
+                      </td>
+
+                      {/* Hora de Entregas */}
+                      <td className="py-2.5 px-2 text-center whitespace-nowrap">
+                        {entregada ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200/90 font-bold font-mono text-xs whitespace-nowrap shadow-2xs">
+                            <Clock className="w-3 h-3 text-emerald-600 shrink-0" />
+                            {entregada}
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center justify-center font-mono text-xs text-slate-400 select-none">
+                            --:--
+                          </span>
+                        )}
+                      </td>
+
                       {/* Bultos */}
-                      <td className="py-2.5 px-3 text-center font-mono font-bold text-slate-900">
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-100 text-slate-800 font-black">
+                      <td className="py-2.5 px-1.5 text-center whitespace-nowrap">
+                        <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded bg-slate-100 text-slate-800 font-black font-mono text-xs">
                           <Package className="w-3 h-3 text-slate-500" />
                           {item.bultos}
                         </span>
                       </td>
 
                       {/* Ruta / Provincia */}
-                      <td className="py-2.5 px-3 text-slate-700">
-                        <div className="flex items-center gap-1 text-[11px]">
+                      <td className="py-2.5 px-2 text-slate-700 whitespace-nowrap">
+                        <div className="flex items-center gap-1 text-xs">
                           <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
-                          <span className="font-medium truncate">{item.provincia}</span>
+                          <span className="font-medium text-slate-800">{toTitleCase(item.provincia)}</span>
                         </div>
                       </td>
 
                       {/* Unidad Asignada */}
-                      <td className="py-2.5 px-3">
-                        <div className="font-semibold text-slate-800 text-[11px]">
+                      <td className="py-2.5 px-2 whitespace-nowrap">
+                        <div className="font-semibold text-slate-800 text-xs tracking-tight uppercase font-mono leading-tight">
                           {item.unidad}
                         </div>
-                        <span className={`inline-block text-[9px] font-bold px-1.5 py-0.2 rounded mt-0.5 ${
+                        <span className={`inline-block text-[9px] font-bold px-1.5 py-0.2 rounded mt-0.5 uppercase tracking-wider ${
                           isTercerizado 
                             ? 'bg-amber-100 text-amber-800 border border-amber-200' 
                             : 'bg-blue-100 text-blue-800 border border-blue-200'
@@ -244,30 +305,30 @@ export const FarmaciasTab: React.FC<FarmaciasTabProps> = ({
                       </td>
 
                       {/* Chofer */}
-                      <td className="py-2.5 px-3 text-slate-700 text-[11px]">
-                        <span className="font-medium">{item.chofer || 'Por asignar'}</span>
+                      <td className="py-2.5 px-2 text-slate-800 text-xs whitespace-nowrap">
+                        <span className="font-medium">{toTitleCase(item.chofer) || 'Por asignar'}</span>
                         {item.ayudante && item.ayudante !== 'N/A' && (
-                          <span className="block text-[10px] text-slate-400">Ayudante: {item.ayudante}</span>
+                          <span className="block text-[10px] text-slate-400">Ayud: {toTitleCase(item.ayudante)}</span>
                         )}
                       </td>
 
                       {/* Estado */}
-                      <td className="py-2.5 px-3 text-center">
+                      <td className="py-2.5 px-2 text-center whitespace-nowrap">
                         {isDelivered ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
-                            <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-300 whitespace-nowrap shadow-2xs">
+                            <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" />
                             Entregado
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300">
-                            <Clock className="w-3 h-3 text-amber-600" />
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-300 whitespace-nowrap shadow-2xs">
+                            <Clock className="w-3 h-3 text-amber-600 shrink-0" />
                             Pendiente
                           </span>
                         )}
                       </td>
 
                       {/* Observación */}
-                      <td className="py-2.5 px-3 text-slate-600 text-[11px] italic">
+                      <td className="py-2.5 px-2.5 text-slate-600 text-xs italic">
                         {item.observacion || 'Sin novedad'}
                       </td>
                     </tr>
@@ -278,17 +339,17 @@ export const FarmaciasTab: React.FC<FarmaciasTabProps> = ({
             {/* Subtotal por Sede */}
             {items.length > 0 && (
               <tfoot>
-                <tr className="bg-slate-100 font-bold text-slate-800 border-t-2 border-slate-300 text-[11px]">
-                  <td colSpan={3} className="py-2.5 px-4">
+                <tr className="bg-slate-100 font-bold text-slate-800 border-t-2 border-slate-300 text-xs">
+                  <td colSpan={5} className="py-2.5 px-3">
                     SUBTOTAL {title} ({items.length} pedidos)
                   </td>
-                  <td className="py-2.5 px-3 text-center font-mono font-black text-slate-950">
+                  <td className="py-2.5 px-1.5 text-center font-mono font-black text-slate-950">
                     {totalSedeBultos}
                   </td>
-                  <td colSpan={3} className="py-2.5 px-3 text-slate-500">
+                  <td colSpan={3} className="py-2.5 px-2 text-slate-500 text-[11px]">
                     {entregadosSede} entregados · {pendientesSede} pendientes
                   </td>
-                  <td className="py-2.5 px-3 text-center font-mono font-black text-emerald-800">
+                  <td className="py-2.5 px-2 text-center font-mono font-black text-emerald-800">
                     {efectividadSede}%
                   </td>
                   <td></td>
@@ -476,6 +537,24 @@ export const FarmaciasTab: React.FC<FarmaciasTabProps> = ({
               className="w-full pl-9 pr-4 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white"
             />
           </div>
+
+          {/* Botón de Ajuste de Ancho Completo */}
+          <button
+            onClick={() => setIsFullFitMode(!isFullFitMode)}
+            className={`px-3 py-1.5 text-xs font-bold rounded-lg border transition-colors whitespace-nowrap shadow-2xs inline-flex items-center gap-1.5 cursor-pointer shrink-0 ${
+              isFullFitMode
+                ? 'bg-indigo-50 text-indigo-700 border-indigo-300 hover:bg-indigo-100'
+                : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
+            }`}
+            title="Ajustar todas las columnas al 100% de la pantalla para ver el reporte completo sin scroll horizontal"
+          >
+            {isFullFitMode ? (
+              <Minimize2 className="w-3.5 h-3.5 text-indigo-600" />
+            ) : (
+              <Maximize2 className="w-3.5 h-3.5 text-slate-600" />
+            )}
+            <span>{isFullFitMode ? 'Cuadro Completo (100%)' : 'Vista Expandida'}</span>
+          </button>
 
           {onCopyReportWithPhoto && (
             <button

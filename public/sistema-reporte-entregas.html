@@ -1074,12 +1074,26 @@
 
                 let rowsHtml = '';
                 if (itemsSede.length === 0) {
-                    rowsHtml = `<tr><td colspan="8" class="py-6 text-center text-slate-400 italic">No hay despachos de farmacias para esta sede en la fecha seleccionada.</td></tr>`;
+                    rowsHtml = `<tr><td colspan="10" class="py-6 text-center text-slate-400 italic">No hay despachos de farmacias para esta sede en la fecha seleccionada.</td></tr>`;
                 } else {
                     itemsSede.forEach((item, idx) => {
                         const esEntregado = (item.estado || '').toLowerCase().includes('entregad');
                         const farmaciaNombre = item.farmacia && item.farmacia.trim() ? item.farmacia : `Cliente Ruta ${item.provincia || ''}`;
                         const pedidoNumero = item.numeroPedido && item.numeroPedido.trim() ? item.numeroPedido : `PED-2026-${String(idx + 101).padStart(4, '0')}`;
+                        
+                        const cleanTime = (t) => {
+                            if (!t || !t.trim()) return '';
+                            return t.trim().replace(/\s*p\.?\s*m\.?/i, ' PM').replace(/\s*a\.?\s*m\.?/i, ' AM');
+                        };
+                        const facturada = cleanTime(item.horaFacturacion);
+                        const entregada = cleanTime(item.horaEntrega);
+
+                        const factDisplay = facturada 
+                            ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 font-bold border border-indigo-200 whitespace-nowrap">${facturada}</span>`
+                            : `<span class="text-slate-400 font-mono text-xs">--:--</span>`;
+                        const entrDisplay = entregada
+                            ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 font-bold border border-emerald-200 whitespace-nowrap">${entregada}</span>`
+                            : `<span class="text-slate-400 font-mono text-xs">--:--</span>`;
 
                         rowsHtml += `
                             <tr class="hover:bg-slate-50 transition-colors ${idx % 2 === 1 ? 'bg-slate-50/50' : 'bg-white'}">
@@ -1091,16 +1105,18 @@
                                         </div>
                                         <div>
                                             <span class="font-bold text-slate-900 block leading-tight">${farmaciaNombre}</span>
-                                            <span class="text-[10px] text-slate-400">${item.provincia || 'N/A'}</span>
+                                            <span class="text-[10px] text-slate-400 capitalize">${item.provincia || 'N/A'}</span>
                                         </div>
                                     </div>
                                 </td>
-                                <td class="py-2.5 px-3 font-mono font-bold text-blue-700 text-xs">${pedidoNumero}</td>
+                                <td class="py-2.5 px-3 font-mono font-bold text-blue-700 text-xs whitespace-nowrap">${pedidoNumero}</td>
+                                <td class="py-2.5 px-3 text-center font-mono text-xs whitespace-nowrap">${factDisplay}</td>
+                                <td class="py-2.5 px-3 text-center font-mono text-xs whitespace-nowrap">${entrDisplay}</td>
                                 <td class="py-2.5 px-3 text-center font-mono font-bold text-slate-900">${item.bultos || 1}</td>
-                                <td class="py-2.5 px-3 font-semibold text-slate-800">${item.unidad || 'Unidad'}</td>
-                                <td class="py-2.5 px-3 text-slate-700">${item.chofer || 'Por asignar'}</td>
-                                <td class="py-2.5 px-3 text-center">
-                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${esEntregado ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-amber-100 text-amber-800 border border-amber-300'}">
+                                <td class="py-2.5 px-3 font-semibold text-slate-800 capitalize whitespace-nowrap">${item.unidad || 'Unidad'}</td>
+                                <td class="py-2.5 px-3 text-slate-700 capitalize whitespace-nowrap">${item.chofer || 'Por asignar'}</td>
+                                <td class="py-2.5 px-3 text-center whitespace-nowrap">
+                                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${esEntregado ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-amber-100 text-amber-800 border border-amber-300'}">
                                         ${esEntregado ? '✅ Entregado' : '⏳ Pendiente'}
                                     </span>
                                 </td>
@@ -1133,10 +1149,12 @@
                                 <tr class="bg-slate-100 text-slate-700 font-bold border-b border-slate-200 text-[11px] uppercase tracking-wider">
                                     <th class="py-2.5 px-4 w-12 text-center">#</th>
                                     <th class="py-2.5 px-3 min-w-[220px]">Farmacia / Distribuidora</th>
-                                    <th class="py-2.5 px-3 w-36">Número de Pedido</th>
-                                    <th class="py-2.5 px-3 text-center w-24">Bultos</th>
-                                    <th class="py-2.5 px-3 w-40">Unidad</th>
-                                    <th class="py-2.5 px-3 w-40">Chofer</th>
+                                    <th class="py-2.5 px-3 w-32">Número de Pedido</th>
+                                    <th class="py-2.5 px-3 w-32 text-center">Hora Facturación</th>
+                                    <th class="py-2.5 px-3 w-32 text-center">Hora Entregas</th>
+                                    <th class="py-2.5 px-3 text-center w-20">Bultos</th>
+                                    <th class="py-2.5 px-3 w-36">Unidad</th>
+                                    <th class="py-2.5 px-3 w-36">Chofer</th>
                                     <th class="py-2.5 px-3 text-center w-28">Estado</th>
                                     <th class="py-2.5 px-3 min-w-[180px]">Observación</th>
                                 </tr>
@@ -1146,7 +1164,7 @@
                             </tbody>
                             <tfoot>
                                 <tr class="bg-slate-100 font-bold text-slate-800 border-t-2 border-slate-300 text-[11px]">
-                                    <td colspan="3" class="py-2.5 px-4">SUBTOTAL ${sede.nombre.split('-')[0]} (${itemsSede.length} pedidos)</td>
+                                    <td colspan="5" class="py-2.5 px-4">SUBTOTAL ${sede.nombre.split('-')[0]} (${itemsSede.length} pedidos)</td>
                                     <td class="py-2.5 px-3 text-center font-mono font-black text-slate-950">${totalBultosSede}</td>
                                     <td colspan="2" class="py-2.5 px-3 text-slate-500">${entregadosSede} entregados · ${pendientesSede} pendientes</td>
                                     <td class="py-2.5 px-3 text-center font-mono font-black text-emerald-800">${efecSede}%</td>
@@ -1759,6 +1777,8 @@
                 const observacion = findVal('observacion', 'observación', 'notas') || 'Sin novedad';
                 const farmacia = findVal('farmacia/distribuidora', 'farmacia / distribuidora', 'farmacia', 'distribuidora', 'cliente') || '';
                 const numeroPedido = findVal('numero de pedido', 'número de pedido', 'numero pedido', 'pedido', 'no. pedido') || '';
+                const horaFacturacion = findVal('hora de facturacion', 'hora de facturación', 'hora facturacion', 'hora facturación', 'facturacion', 'factura') || '';
+                const horaEntrega = findVal('hora de entrega', 'hora de entregas', 'hora entrega', 'hora entregas', 'hora de despacho', 'hora') || '';
 
                 nuevosDespachos.push({
                     fecha: normalizarFecha(fecha),
@@ -1771,7 +1791,9 @@
                     estado,
                     observacion,
                     farmacia,
-                    numeroPedido
+                    numeroPedido,
+                    horaFacturacion,
+                    horaEntrega
                 });
             });
 

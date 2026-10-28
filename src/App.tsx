@@ -55,9 +55,9 @@ import {
   MapPin
 } from 'lucide-react';
 
-const STORAGE_KEY = 'rd_despachos_report_data_v6';
-const SHEET_URL_KEY = 'rd_despachos_report_sheet_url_v6';
-const VISIBLE_COLUMNS_KEY = 'rd_despachos_visible_columns_v6';
+const STORAGE_KEY = 'rd_despachos_report_data_v7';
+const SHEET_URL_KEY = 'rd_despachos_report_sheet_url_v7';
+const VISIBLE_COLUMNS_KEY = 'rd_despachos_visible_columns_v7';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'consolidado' | 'farmacias' | 'provincias'>('consolidado');
@@ -202,6 +202,8 @@ export default function App() {
         provincia: true,
         farmacia: true,
         numeroPedido: true,
+        horaFacturacion: true,
+        horaEntrega: true,
         observacion: true,
         entregados: true,
         pendientes: true,
@@ -219,6 +221,8 @@ export default function App() {
         provincia: true,
         farmacia: false,
         numeroPedido: false,
+        horaFacturacion: false,
+        horaEntrega: false,
         observacion: true,
         entregados: true,
         pendientes: true,
@@ -236,6 +240,8 @@ export default function App() {
         provincia: true,
         farmacia: false,
         numeroPedido: false,
+        horaFacturacion: false,
+        horaEntrega: false,
         observacion: false,
         entregados: true,
         pendientes: false,

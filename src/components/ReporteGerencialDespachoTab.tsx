@@ -804,6 +804,8 @@ export const ReporteGerencialDespachoTab: React.FC<ReporteGerencialDespachoTabPr
                     <tr className="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
                       <th className="py-2 px-3">N° Pedido</th>
                       <th className="py-2 px-3">Farmacia / Distribuidora</th>
+                      <th className="py-2 px-3 text-center">Hora Facturación</th>
+                      <th className="py-2 px-3 text-center">Hora Entregas</th>
                       <th className="py-2 px-3">Unidad</th>
                       <th className="py-2 px-3">Chofer</th>
                       <th className="py-2 px-3">Sede / Origen</th>
@@ -825,6 +827,14 @@ export const ReporteGerencialDespachoTab: React.FC<ReporteGerencialDespachoTabPr
 
                           <td className="py-2.5 px-3 font-bold text-slate-900">
                             {item.farmacia || <span className="text-slate-400 italic">No especificada</span>}
+                          </td>
+
+                          <td className="py-2.5 px-3 text-center font-mono text-[11px] text-indigo-700 font-bold">
+                            {item.horaFacturacion || '--:--'}
+                          </td>
+
+                          <td className="py-2.5 px-3 text-center font-mono text-[11px] text-emerald-800 font-bold">
+                            {item.horaEntrega || (isDelivered ? 'Entregado' : 'Pendiente')}
                           </td>
 
                           <td className="py-2.5 px-3 font-semibold text-slate-700">
