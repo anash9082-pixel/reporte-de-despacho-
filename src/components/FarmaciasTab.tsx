@@ -10,21 +10,23 @@ import {
   Clock, 
   Hash, 
   Search, 
-  SlidersHorizontal,
-  ExternalLink,
-  Store,
-  FileSpreadsheet,
-  Calendar,
-  Camera,
-  Copy,
-  ChevronLeft,
-  ChevronRight,
-  Receipt,
-  Timer,
-  Maximize2,
-  Minimize2
+  SlidersHorizontal, 
+  ExternalLink, 
+  Store, 
+  FileSpreadsheet, 
+  Calendar, 
+  Camera, 
+  Copy, 
+  ChevronLeft, 
+  ChevronRight, 
+  Receipt, 
+  Timer, 
+  Maximize2, 
+  Minimize2,
+  Check
 } from 'lucide-react';
 import { getTodayString, getYesterdayString, formatDateLabel } from '../utils/csvHelper';
+import { captureReportToPng, copyReportImageToClipboard } from '../utils/captureHelper';
 
 interface FarmaciasTabProps {
   deliveries: DeliveryItem[];
@@ -35,6 +37,7 @@ interface FarmaciasTabProps {
   isCapturing?: boolean;
   onCopyReportWithPhoto?: () => void;
   isCopying?: boolean;
+  onShowToast?: (msg: string) => void;
 }
 
 export const FarmaciasTab: React.FC<FarmaciasTabProps> = ({
@@ -45,11 +48,14 @@ export const FarmaciasTab: React.FC<FarmaciasTabProps> = ({
   onCapturePng,
   isCapturing = false,
   onCopyReportWithPhoto,
-  isCopying = false
+  isCopying = false,
+  onShowToast
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedHubFilter, setSelectedHubFilter] = useState<'all' | 'santodomingo' | 'santiago'>('all');
   const [isFullFitMode, setIsFullFitMode] = useState<boolean>(true);
+  const [capturingSede, setCapturingSede] = useState<string | null>(null);
+  const [copyingSede, setCopyingSede] = useState<string | null>(null);
 
   // Filter deliveries for the farmacias tab
   const filteredList = useMemo(() => {
@@ -122,6 +128,42 @@ export const FarmaciasTab: React.FC<FarmaciasTabProps> = ({
       .join(' ');
   };
 
+  const handleCaptureIndividualSede = async (sedeKey: 'Santo Domingo' | 'Santiago', elementId: string) => {
+    setCapturingSede(sedeKey);
+    const dateTag = selectedDate || 'Consolidado';
+    const cleanSede = sedeKey === 'Santo Domingo' ? 'Santo_Domingo' : 'Santiago';
+    const fileName = `Reporte_Farmacias_${cleanSede}_${dateTag}.png`;
+    if (onShowToast) onShowToast(`Generando imagen de Sede ${sedeKey}...`);
+    try {
+      const success = await captureReportToPng(elementId, dateTag, fileName);
+      if (success) {
+        if (onShowToast) onShowToast(`📷 ¡Cuadro de Sede ${sedeKey} descargado en alta calidad!`);
+      } else {
+        if (onShowToast) onShowToast(`No se pudo generar la imagen de ${sedeKey}.`);
+      }
+    } catch (err) {
+      console.error(err);
+      if (onShowToast) onShowToast(`Error al capturar ${sedeKey}.`);
+    } finally {
+      setCapturingSede(null);
+    }
+  };
+
+  const handleCopyIndividualSede = async (sedeKey: 'Santo Domingo' | 'Santiago', elementId: string, itemsCount: number, bultosCount: number) => {
+    setCopyingSede(sedeKey);
+    if (onShowToast) onShowToast(`Copiando cuadro de Sede ${sedeKey} al portapapeles...`);
+    try {
+      const summary = `📦 *REPORTE DETALLADO DE FARMACIAS Y PEDIDOS*\n🏢 *${sedeKey.toUpperCase()}*\n📅 Fecha: ${selectedDate || 'Todas las fechas'}\n🚚 Pedidos: ${itemsCount} | Bultos: ${bultosCount}`;
+      const res = await copyReportImageToClipboard(elementId, summary);
+      if (onShowToast) onShowToast(res.message);
+    } catch (err) {
+      console.error(err);
+      if (onShowToast) onShowToast(`Error al copiar imagen de ${sedeKey}.`);
+    } finally {
+      setCopyingSede(null);
+    }
+  };
+
   const renderSedeTable = (
     title: string, 
     sedeKey: 'Santo Domingo' | 'Santiago', 
@@ -132,9 +174,15 @@ export const FarmaciasTab: React.FC<FarmaciasTabProps> = ({
     const entregadosSede = items.filter(d => d.estado.toLowerCase().includes('entregad')).length;
     const pendientesSede = items.length - entregadosSede;
     const efectividadSede = items.length > 0 ? Math.round((entregadosSede / items.length) * 100) : 0;
+    const sedeElementId = sedeKey === 'Santo Domingo' ? 'cuadro-sede-santodomingo' : 'cuadro-sede-santiago';
+    const isThisCapturing = capturingSede === sedeKey;
+    const isThisCopying = copyingSede === sedeKey;
 
     return (
-      <div className="bg-white rounded-xl shadow-xs border border-slate-200 overflow-hidden mb-6">
+      <div 
+        id={sedeElementId} 
+        className="bg-white rounded-xl shadow-xs border border-slate-200 overflow-hidden mb-6"
+      >
         {/* Sede Header */}
         <div className={`px-6 py-3.5 flex flex-wrap items-center justify-between gap-3 text-white ${
           sedeKey === 'Santo Domingo' ? 'bg-slate-900 border-b-2 border-blue-600' : 'bg-slate-900 border-b-2 border-amber-600'
@@ -155,16 +203,41 @@ export const FarmaciasTab: React.FC<FarmaciasTabProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center gap-3 text-xs font-mono">
-            <span className="bg-slate-800/80 px-2.5 py-1 rounded text-slate-300 border border-slate-700">
-              <strong className="text-white font-bold">{items.length}</strong> Despachos
-            </span>
-            <span className="bg-slate-800/80 px-2.5 py-1 rounded text-slate-300 border border-slate-700">
-              <strong className="text-blue-300 font-bold">{totalSedeBultos}</strong> Bultos
-            </span>
-            <span className="bg-emerald-950/80 text-emerald-300 border border-emerald-800 px-2.5 py-1 rounded font-bold">
-              {efectividadSede}% Efectividad
-            </span>
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-2 text-xs font-mono">
+              <span className="bg-slate-800/80 px-2.5 py-1 rounded text-slate-300 border border-slate-700">
+                <strong className="text-white font-bold">{items.length}</strong> Despachos
+              </span>
+              <span className="bg-slate-800/80 px-2.5 py-1 rounded text-slate-300 border border-slate-700">
+                <strong className="text-blue-300 font-bold">{totalSedeBultos}</strong> Bultos
+              </span>
+              <span className="bg-emerald-950/80 text-emerald-300 border border-emerald-800 px-2.5 py-1 rounded font-bold">
+                {efectividadSede}% Efectividad
+              </span>
+            </div>
+
+            {/* BOTONES EXCLUSIVOS PARA EXTRAER ESTE CUADRO EN IMAGEN */}
+            <div className="flex items-center gap-1.5 ml-2 no-capture no-print">
+              <button
+                onClick={() => handleCopyIndividualSede(sedeKey, sedeElementId, items.length, totalSedeBultos)}
+                disabled={isThisCopying || isThisCapturing}
+                className="px-2.5 py-1 bg-blue-600/90 hover:bg-blue-600 text-white text-[11px] font-bold rounded-lg transition inline-flex items-center gap-1 border border-blue-400/40 cursor-pointer disabled:opacity-50 shadow-2xs"
+                title={`Copiar foto del cuadro de ${sedeKey} al portapapeles (Ctrl+V)`}
+              >
+                <Copy className={`w-3 h-3 text-blue-200 ${isThisCopying ? 'animate-pulse' : ''}`} />
+                <span>{isThisCopying ? 'Copiando...' : 'Copiar Foto'}</span>
+              </button>
+
+              <button
+                onClick={() => handleCaptureIndividualSede(sedeKey, sedeElementId)}
+                disabled={isThisCapturing || isThisCopying}
+                className="px-2.5 py-1 bg-emerald-600/90 hover:bg-emerald-600 text-white text-[11px] font-bold rounded-lg transition inline-flex items-center gap-1 border border-emerald-400/40 cursor-pointer disabled:opacity-50 shadow-2xs"
+                title={`Descargar imagen PNG de alta calidad del cuadro de ${sedeKey}`}
+              >
+                <Camera className="w-3 h-3 text-emerald-200" />
+                <span>{isThisCapturing ? 'Capturando...' : 'Extraer Imagen'}</span>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -556,15 +629,38 @@ export const FarmaciasTab: React.FC<FarmaciasTabProps> = ({
             <span>{isFullFitMode ? 'Cuadro Completo (100%)' : 'Vista Expandida'}</span>
           </button>
 
+          {/* Botones de Extracción Rápida por Sede */}
+          <div className="flex items-center gap-1.5 border-l border-slate-200 pl-2">
+            <button
+              onClick={() => handleCaptureIndividualSede('Santo Domingo', 'cuadro-sede-santodomingo')}
+              disabled={Boolean(capturingSede) || Boolean(copyingSede)}
+              className="px-2.5 py-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors whitespace-nowrap shadow-2xs inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shrink-0"
+              title="Descargar imagen PNG solo del cuadro de Sede Santo Domingo"
+            >
+              <Camera className="w-3.5 h-3.5 text-blue-200" />
+              <span>{capturingSede === 'Santo Domingo' ? 'Descargando...' : '📷 Foto Sto. Dgo.'}</span>
+            </button>
+
+            <button
+              onClick={() => handleCaptureIndividualSede('Santiago', 'cuadro-sede-santiago')}
+              disabled={Boolean(capturingSede) || Boolean(copyingSede)}
+              className="px-2.5 py-1.5 text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 rounded-lg transition-colors whitespace-nowrap shadow-2xs inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shrink-0"
+              title="Descargar imagen PNG solo del cuadro de Sede Santiago"
+            >
+              <Camera className="w-3.5 h-3.5 text-amber-200" />
+              <span>{capturingSede === 'Santiago' ? 'Descargando...' : '📷 Foto Santiago'}</span>
+            </button>
+          </div>
+
           {onCopyReportWithPhoto && (
             <button
               onClick={onCopyReportWithPhoto}
               disabled={isCopying}
-              className="px-3 py-1.5 text-xs font-bold text-white bg-blue-700 hover:bg-blue-800 rounded-lg transition-colors whitespace-nowrap shadow-2xs inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shrink-0"
-              title="Copiar imagen del cuadro y resumen al portapapeles para WhatsApp (Ctrl+V)"
+              className="px-3 py-1.5 text-xs font-bold text-white bg-slate-800 hover:bg-slate-900 rounded-lg transition-colors whitespace-nowrap shadow-2xs inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shrink-0"
+              title="Copiar imagen de todo el reporte consolidado de farmacias (Ctrl+V)"
             >
-              <Copy className={`w-3.5 h-3.5 text-blue-200 ${isCopying ? 'animate-pulse' : ''}`} />
-              <span>{isCopying ? 'Copiando...' : '📋 Copiar con Foto'}</span>
+              <Copy className={`w-3.5 h-3.5 text-slate-300 ${isCopying ? 'animate-pulse' : ''}`} />
+              <span>{isCopying ? 'Copiando...' : '📋 Copiar Ambas'}</span>
             </button>
           )}
 
@@ -573,10 +669,10 @@ export const FarmaciasTab: React.FC<FarmaciasTabProps> = ({
               onClick={onCapturePng}
               disabled={isCapturing}
               className="px-3 py-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors whitespace-nowrap shadow-2xs inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shrink-0"
-              title="Descargar imagen PNG del cuadro de farmacias y pedidos"
+              title="Descargar imagen PNG de ambas sedes unificadas"
             >
               <Camera className="w-3.5 h-3.5" />
-              <span>{isCapturing ? 'Capturando...' : '📷 Capturar PNG'}</span>
+              <span>{isCapturing ? 'Capturando...' : '📷 PNG Ambas'}</span>
             </button>
           )}
         </div>

@@ -54,6 +54,9 @@ interface FilterBarProps {
   onOpenWhatsAppModal: () => void;
   visibleColumnsCount?: number;
   totalFilteredCount: number;
+  autoSyncInterval: number; // 0 = off, 30, 60, 120, 300
+  onSetAutoSyncInterval: (interval: number) => void;
+  lastSyncTime?: Date | null;
 }
 
 export const FilterBar: React.FC<FilterBarProps> = ({
@@ -85,7 +88,10 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   onOpenColumnsModal,
   onOpenWhatsAppModal,
   visibleColumnsCount,
-  totalFilteredCount
+  totalFilteredCount,
+  autoSyncInterval,
+  onSetAutoSyncInterval,
+  lastSyncTime
 }) => {
   const hubTabs: { id: 'all' | HubId; label: string; countText?: string }[] = [
     { id: 'all', label: 'Consolidado Nacional (Ambas Sedes)' },
@@ -214,16 +220,35 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             <span>{isCopying ? 'Copiando foto...' : '📋 Copiar con Foto'}</span>
           </button>
 
-          {/* Sincronizar Google Sheet */}
-          <button
-            onClick={onSyncDirect}
-            disabled={isSyncing}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-lg transition shadow-2xs cursor-pointer disabled:opacity-50"
-            title="Sincronizar datos en tiempo real con Google Sheets"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 text-blue-400 ${isSyncing ? 'animate-spin' : ''}`} />
-            <span>{isSyncing ? 'Sincronizando...' : 'Sincronizar Sheet'}</span>
-          </button>
+          {/* Sincronizar Google Sheet con Selector de Auto-Refresco En Vivo */}
+          <div className="flex items-center rounded-lg bg-slate-900 border border-slate-700 p-0.5 shadow-2xs">
+            <button
+              onClick={onSyncDirect}
+              disabled={isSyncing}
+              className="flex items-center gap-1.5 px-3 py-1.5 hover:bg-slate-800 text-white text-xs font-semibold rounded-md transition cursor-pointer disabled:opacity-50"
+              title="Sincronizar datos en tiempo real con Google Sheets ahora"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 text-blue-400 ${isSyncing ? 'animate-spin' : ''}`} />
+              <span>{isSyncing ? 'Sincronizando...' : 'Sincronizar'}</span>
+            </button>
+
+            {/* Selector de intervalo Auto-Sync */}
+            <div className="border-l border-slate-700 pl-1.5 pr-2 py-1 flex items-center gap-1 text-[11px]">
+              <span className={`w-2 h-2 rounded-full ${autoSyncInterval > 0 ? 'bg-emerald-400 animate-pulse' : 'bg-slate-600'}`} />
+              <select
+                value={autoSyncInterval}
+                onChange={(e) => onSetAutoSyncInterval(Number(e.target.value))}
+                className="bg-transparent text-slate-200 text-[11px] font-semibold focus:outline-none cursor-pointer pr-1"
+                title="Configurar auto-actualización periódica en vivo desde Google Sheet"
+              >
+                <option value={0} className="bg-slate-900 text-white">Manual</option>
+                <option value={30} className="bg-slate-900 text-white">⏱️ Cada 30s</option>
+                <option value={60} className="bg-slate-900 text-white">⏱️ Cada 1 min</option>
+                <option value={120} className="bg-slate-900 text-white">⏱️ Cada 2 min</option>
+                <option value={300} className="bg-slate-900 text-white">⏱️ Cada 5 min</option>
+              </select>
+            </div>
+          </div>
 
           {/* Capturar Reporte en Imagen PNG */}
           <button

@@ -187,6 +187,8 @@ export async function captureReportToPng(
       pixelRatio: 2,
       backgroundColor: '#ffffff',
       cacheBust: true,
+      skipFonts: true,
+      fontEmbedCSS: '',
       width: expansion.fullWidth,
       filter: filterNode as any,
       style: {
@@ -201,36 +203,14 @@ export async function captureReportToPng(
     downloadDataUrl(dataUrl, fileName);
     return true;
   } catch (primaryError) {
-    console.warn('[captureHelper] Primary capture issue, trying fallback with skipFonts:', primaryError);
+    console.warn('[captureHelper] Primary capture issue, trying SVG direct canvas fallback:', primaryError);
 
     try {
-      const dataUrl = await toPng(element, {
-        pixelRatio: 2,
-        backgroundColor: '#ffffff',
-        skipFonts: true,
-        width: expansion.fullWidth,
-        filter: filterNode as any,
-        style: {
-          margin: '0',
-          transform: 'none',
-          width: `${expansion.fullWidth}px`,
-          maxWidth: 'none',
-          overflow: 'visible'
-        }
-      });
-
-      downloadDataUrl(dataUrl, fileName);
-      return true;
-    } catch (secondaryError) {
-      console.warn('[captureHelper] Falling back to SVG direct canvas rendering:', secondaryError);
-
-      try {
-        const success = await directSvgCanvasRender(element, fileName, filterNode);
-        return success;
-      } catch (finalError) {
-        console.error('[captureHelper] All capture attempts failed:', finalError);
-        return false;
-      }
+      const success = await directSvgCanvasRender(element, fileName, filterNode);
+      return success;
+    } catch (finalError) {
+      console.error('[captureHelper] All capture attempts failed:', finalError);
+      return false;
     }
   } finally {
     expansion.restore();
@@ -263,6 +243,8 @@ export async function copyReportImageToClipboard(
         pixelRatio: 2,
         backgroundColor: '#ffffff',
         cacheBust: true,
+        skipFonts: true,
+        fontEmbedCSS: '',
         width: expansion.fullWidth,
         filter: filterNode as any,
         style: {
@@ -278,6 +260,7 @@ export async function copyReportImageToClipboard(
         pixelRatio: 2,
         backgroundColor: '#ffffff',
         skipFonts: true,
+        fontEmbedCSS: '',
         width: expansion.fullWidth,
         filter: filterNode as any,
         style: {

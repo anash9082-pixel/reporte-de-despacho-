@@ -26,6 +26,8 @@ import { DeliveryFormModal } from './components/DeliveryFormModal';
 import { GoogleSheetsModal } from './components/GoogleSheetsModal';
 import { ColumnVisibilityModal } from './components/ColumnVisibilityModal';
 import { WhatsAppModal } from './components/WhatsAppModal';
+import { OrderSearchModal } from './components/OrderSearchModal';
+import { DriverRouteModal } from './components/DriverRouteModal';
 import { exportDeliveriesToCSV, normalizeDateString, getTodayString, getYesterdayString } from './utils/csvHelper';
 import { captureReportToPng, copyReportImageToClipboard } from './utils/captureHelper';
 import { exportSingleFileHtml } from './utils/standaloneExporter';
@@ -52,7 +54,9 @@ import {
   MessageSquare,
   Store,
   Copy,
-  MapPin
+  MapPin,
+  Search,
+  UserCheck
 } from 'lucide-react';
 
 const STORAGE_KEY = 'rd_despachos_report_data_v7';
@@ -123,6 +127,8 @@ export default function App() {
   const [isSheetsModalOpen, setIsSheetsModalOpen] = useState(false);
   const [isColumnsModalOpen, setIsColumnsModalOpen] = useState(false);
   const [isWhatsAppModalOpen, setIsWhatsAppModalOpen] = useState(false);
+  const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+  const [isDriverRouteModalOpen, setIsDriverRouteModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<DeliveryItem | null>(null);
   const [defaultBlockForNew, setDefaultBlockForNew] = useState<BlockId>('santodomingo_propia');
 
@@ -146,6 +152,31 @@ export default function App() {
   const [isCapturing, setIsCapturing] = useState(false);
   const [isSyncingSheet, setIsSyncingSheet] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
+
+  // Auto-sync polling interval (0 = manual off, 30s, 60s, 120s, 300s)
+  const [autoSyncInterval, setAutoSyncInterval] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('rd_despachos_autosync_interval');
+      return saved ? Number(saved) : 60; // Default: auto-sync every 60s
+    } catch {
+      return 60;
+    }
+  });
+
+  const handleSetAutoSyncInterval = (interval: number) => {
+    setAutoSyncInterval(interval);
+    try {
+      localStorage.setItem('rd_despachos_autosync_interval', String(interval));
+    } catch {
+      // ignore
+    }
+    if (interval > 0) {
+      showToast(`⚡ Auto-actualización activada cada ${interval >= 60 ? `${interval / 60} min` : `${interval} seg`}`);
+    } else {
+      showToast('⏸️ Auto-actualización desactivada (Modo Manual)');
+    }
+  };
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -270,6 +301,7 @@ export default function App() {
       const { items } = await loadGoogleSheetDeliveries(activeSheetUrl || DEFAULT_SHEET_URL);
       if (items && items.length > 0) {
         setDeliveries(items);
+        setLastSyncTime(new Date());
         const todayStr = getTodayString();
         const availableDates = Array.from(new Set(items.map(i => normalizeDateString(i.fecha)).filter(Boolean)));
         if (availableDates.includes(todayStr)) {
@@ -299,6 +331,17 @@ export default function App() {
   useEffect(() => {
     handleDirectSheetSync(false);
   }, []);
+
+  // Periodic background auto-sync timer (Polling / Live timer)
+  useEffect(() => {
+    if (autoSyncInterval <= 0) return;
+    const intervalMs = autoSyncInterval * 1000;
+    const timer = setInterval(() => {
+      // Background sync silently without disruptive toast
+      handleDirectSheetSync(false);
+    }, intervalMs);
+    return () => clearInterval(timer);
+  }, [autoSyncInterval, activeSheetUrl]);
 
   // Dynamically calculate available provinces for the active date (with count of shipments)
   const availableProvincias = useMemo(() => {
@@ -652,6 +695,26 @@ export default function App() {
               <span className="hidden sm:inline">📋 Copiar con Foto</span>
             </button>
 
+            {/* Rastreador Global de Pedidos */}
+            <button
+              onClick={() => setIsSearchModalOpen(true)}
+              className="px-3.5 py-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 rounded-lg transition-colors whitespace-nowrap shadow-2xs inline-flex items-center gap-1.5 cursor-pointer"
+              title="Buscar y rastrear cualquier pedido, farmacia o conduces en todo el historial"
+            >
+              <Search className="w-3.5 h-3.5 text-blue-200" />
+              <span>🔍 Rastrear Pedido</span>
+            </button>
+
+            {/* Rutas por Chofer para WhatsApp */}
+            <button
+              onClick={() => setIsDriverRouteModalOpen(true)}
+              className="px-3.5 py-1.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 rounded-lg transition-colors whitespace-nowrap shadow-2xs inline-flex items-center gap-1.5 cursor-pointer"
+              title="Generar y enviar hoja de ruta individual para cada chofer por WhatsApp"
+            >
+              <UserCheck className="w-3.5 h-3.5 text-indigo-200" />
+              <span>👤 Rutas Chofer</span>
+            </button>
+
             <button
               onClick={() => setIsWhatsAppModalOpen(true)}
               className="px-3.5 py-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors whitespace-nowrap shadow-2xs inline-flex items-center gap-1.5 cursor-pointer"
@@ -804,6 +867,9 @@ export default function App() {
                 onOpenWhatsAppModal={() => setIsWhatsAppModalOpen(true)}
                 visibleColumnsCount={Object.values(visibleColumns).filter(Boolean).length}
                 totalFilteredCount={filteredDeliveries.length}
+                autoSyncInterval={autoSyncInterval}
+                onSetAutoSyncInterval={handleSetAutoSyncInterval}
+                lastSyncTime={lastSyncTime}
               />
             </section>
 
@@ -834,6 +900,7 @@ export default function App() {
               isCapturing={isCapturing}
               onCopyReportWithPhoto={handleCopyReportWithPhoto}
               isCopying={isCopying}
+              onShowToast={showToast}
             />
           </section>
         )}
@@ -961,6 +1028,25 @@ export default function App() {
         deliveries={filteredDeliveries}
         selectedDate={selectedDate}
         kpis={kpis}
+      />
+
+      {/* Global Order Search & Tracking Modal (Opción D) */}
+      <OrderSearchModal
+        isOpen={isSearchModalOpen}
+        onClose={() => setIsSearchModalOpen(false)}
+        deliveries={deliveries}
+        onSelectDate={(d) => {
+          setSelectedDate(d);
+          setIsSearchModalOpen(false);
+        }}
+      />
+
+      {/* Individual Driver Route Itinerary Modal for WhatsApp (Similar a Opción A) */}
+      <DriverRouteModal
+        isOpen={isDriverRouteModalOpen}
+        onClose={() => setIsDriverRouteModalOpen(false)}
+        deliveries={filteredDeliveries}
+        selectedDate={selectedDate}
       />
     </div>
   );
